@@ -137,7 +137,7 @@ html, body {
 .tab-item.active span { color: var(--navy); }
 
 /* ── Detail Page ── */
-.detail-page { position: fixed; top: 0; left: 50%; transform: translateX(-50%); width: 100%; max-width: 480px; height: 100%; background: #fff; overflow-y: auto; }
+.detail-page { position: fixed; inset: 0; background: var(--bg); max-width: 430px; left: 50%; transform: translateX(-50%); z-index: 200; display: none; flex-direction: column; overflow: hidden; }
 .detail-page.open { display: flex; }
 .detail-header { display: flex; align-items: center; justify-content: space-between; padding: 54px 14px 10px; flex-shrink: 0; background: rgba(250,250,248,0.94); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); border-bottom: 0.5px solid var(--border); }
 .detail-back { display: flex; align-items: center; gap: 2px; background: none; border: none; cursor: pointer; font-size: 16px; color: var(--navy); font-family: inherit; font-weight: 500; padding: 4px 6px; }
