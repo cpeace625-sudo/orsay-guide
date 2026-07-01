@@ -1,62 +1,38 @@
 [
   {
     "id": "53601",
-    "floor": "0",
-    "room": "7",
-    "title_ko": "풀밭 위의 점심식사",
-    "title_original": "Le Déjeuner sur l'herbe",
-    "artist_ko": "에두아르 마네",
-    "artist_original": "Édouard Manet",
-    "rating": 4.5,
-    "audio_duration": "4:32",
-    "description": "1863년 낙선전에 출품된 이 작품은 야외에서 옷을 벗은 여성과 정장을 입은 두 남성이 함께 있는 장면으로 당시 파리 사회에 큰 충격을 주었습니다."
+    "title_ko": "아를의 별이 빛나는 밤",
+    "title_original": "La Nuit étoilée, Arles",
+    "artist_ko": "빈센트 반 고흐",
+    "artist_original": "Vincent van Gogh",
+    "floor": "2",
+    "room": "35",
+    "duration": "2:30",
+    "rating": 5,
+    "description": "고흐가 아를의 론강에서 밤하늘을 보며 그린 걸작입니다. 북두칠성이 빛나는 푸른 밤하늘과 강물에 비친 노란 가스등 불빛의 대비가 아름다운 작품입니다."
   },
   {
     "id": "53602",
+    "title_ko": "이삭줍기",
+    "title_original": "Des glaneuses",
+    "artist_ko": "장 프랑수아 밀레",
+    "artist_original": "Jean-François Millet",
     "floor": "0",
-    "room": "14",
-    "title_ko": "올랭피아",
-    "title_original": "Olympia",
-    "artist_ko": "에두아르 마네",
-    "artist_original": "Édouard Manet",
-    "rating": 4.0,
-    "audio_duration": "3:45",
-    "description": "1865년 살롱에 출품된 이 작품은 누드화의 전통을 현대적으로 재해석하여 당시 엄청난 스캔들을 일으켰습니다."
+    "room": "4",
+    "duration": "3:15",
+    "rating": 4.5,
+    "description": "추수가 끝난 황금빛 들판에서 남은 이삭을 줍고 있는 세 명의 가난한 농촌 여인들을 그린 그림입니다. 노동의 숭고함과 평화로운 자연이 어우러져 있습니다."
   },
   {
     "id": "53603",
-    "floor": "5",
-    "room": "35",
-    "title_ko": "별이 빛나는 밤의 카페 테라스",
-    "title_original": "Terrasse du café le soir",
-    "artist_ko": "빈센트 반 고흐",
-    "artist_original": "Vincent van Gogh",
-    "rating": 5.0,
-    "audio_duration": "5:10",
-    "description": "1888년 아를에서 그린 이 작품은 고흐가 처음으로 별이 가득한 밤하늘을 그린 작품입니다. 노란 빛으로 빛나는 카페 테라스와 파란 밤하늘의 대비가 인상적입니다."
-  },
-  {
-    "id": "53604",
-    "floor": "5",
-    "room": "43",
-    "title_ko": "그랑드 자트 섬의 일요일 오후",
-    "title_original": "Un dimanche après-midi à l'Île de la Grande Jatte",
-    "artist_ko": "조르주 쇠라",
-    "artist_original": "Georges Seurat",
-    "rating": 4.5,
-    "audio_duration": "5:18",
-    "description": "점묘법의 대표작으로, 수백만 개의 점으로 이루어진 이 대형 작품은 2년에 걸쳐 완성되었습니다."
-  },
-  {
-    "id": "53605",
-    "floor": "2",
-    "room": "52",
-    "title_ko": "생라자르역 : 외부 풍경과 신호, 그리고 눈부신 햇살",
-    "title_original": "La Gare Saint-Lazare",
-    "artist_ko": "클로드 모네",
-    "artist_original": "Claude Monet",
-    "rating": 4.5,
-    "audio_duration": "3:12",
-    "description": "기차의 증기와 연기, 철골 구조물 사이로 비치는 빛을 포착하여 현대 도시의 역동성을 인상주의 기법으로 그려냈습니다."
+    "title_ko": "풀밭 위의 점심 식사",
+    "title_original": "Le Déjeuner sur l'herbe",
+    "artist_ko": "에두아르 마네",
+    "artist_original": "Édouard Manet",
+    "floor": "0",
+    "room": "19",
+    "duration": "4:00",
+    "rating": 5,
+    "description": "당시 파리 화단에 큰 충격을 주었던 마네의 대표작입니다. 전통적인 신화 속 여신이 아닌, 당대 현대 여성의 누드를 사실적으로 그려 내어 모더니즘의 출발점이 되었습니다."
   }
 ]
