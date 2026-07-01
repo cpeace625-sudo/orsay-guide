@@ -11,16 +11,6 @@
 <body>
 <div class="app">
 
-  <!-- Status Bar -->
-  <div class="status-bar">
-    <span class="time" id="statusTime">9:41</span>
-    <div class="icons">
-      <svg viewBox="0 0 24 24"><rect x="1" y="15" width="4" height="6" rx="1"/><rect x="7" y="10" width="4" height="11" rx="1"/><rect x="13" y="5" width="4" height="16" rx="1"/><rect x="19" y="1" width="4" height="20" rx="1"/></svg>
-      <svg viewBox="0 0 24 24" style="fill:none;stroke:#1C1C1E;stroke-width:2" stroke-linecap="round"><path d="M5 12.55a11 11 0 0 1 14.08 0"/><path d="M1.42 9a16 16 0 0 1 21.16 0"/><path d="M8.53 16.11a6 6 0 0 1 6.95 0"/><circle cx="12" cy="20" r="1" fill="#1C1C1E"/></svg>
-      <svg viewBox="0 0 24 24"><rect x="1" y="7" width="18" height="11" rx="2" opacity="0.2"/><rect x="2" y="8" width="14" height="9" rx="1"/><path d="M20 10h1a1 1 0 0 1 1 1v3a1 1 0 0 1-1 1h-1V10z" opacity="0.5"/></svg>
-    </div>
-  </div>
-
   <!-- Header -->
   <div class="header">
     <div class="header-top">
@@ -29,7 +19,8 @@
         <div class="header-title">오디오 가이드</div>
       </div>
       <div class="header-progress">
-        <strong id="progressDone">0</strong> / <span id="progressTotal">0</span><br>
+        <strong id="progressDone">0</strong> / <span id="progressTotal">0</span>
+
         <span style="font-size:11px;">감상 완료</span>
       </div>
     </div>
@@ -81,10 +72,6 @@
       <svg viewBox="0 0 24 24"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
       <span>감상완료</span>
     </div>
-    <div class="tab-item" data-tab="search">
-      <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-      <span>검색</span>
-    </div>
   </nav>
 
   <!-- Mini Player -->
@@ -135,7 +122,6 @@
       <div class="detail-artist-orig" id="detailArtistOrig"></div>
       <div class="detail-stars" id="detailStars"></div>
 
-      <!-- Audio Player -->
       <div class="audio-player">
         <div class="audio-top">
           <button class="audio-play-btn" id="audioPlayBtn">
@@ -158,17 +144,11 @@
 
       <div class="detail-desc-label">작품 설명</div>
       <div class="detail-desc" id="detailDesc"></div>
-    </div>
-  </div>
+      
+      <!-- 이 방의 다른 작품 -->
+      <div id="relatedWorks"></div>
 
-  <div class="detail-footer">
-    <button class="detail-nav-btn" id="btnPrev">
-      <svg viewBox="0 0 24 24"><polyline points="15 18 9 12 15 6"/></svg> 이전
-    </button>
-    <button class="detail-nav-btn center-btn" id="btnList">목록</button>
-    <button class="detail-nav-btn" id="btnNext">
-      다음 <svg viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg>
-    </button>
+    </div>
   </div>
 </div>
 </body>
