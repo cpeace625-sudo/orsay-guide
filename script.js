@@ -456,3 +456,63 @@ document.getElementById('detailDoneBtn').addEventListener('click', () => {
 // App Start
 loadData();
 
+// ... 앞서 작성한 script.js 코드의 잘린 부분부터 이어짐 ...
+        <span class="card-duration">
+          <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg> 
+          ${aw.duration || '0:00'}
+        </span>
+        <div class="card-stars">${starsSVG(aw.rating || 0)}</div>
+      </div>
+    </div>
+    <button class="card-fav-btn${fav ? ' active' : ''}" data-id="${aw.id}">
+      <svg viewBox="0 0 24 24"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
+    </button>
+  </div>
+  `;
+}
+
+// ══════════════════════════════════════════
+//  진척도 및 헤더 업데이트
+// ══════════════════════════════════════════
+function updateProgress() {
+  document.getElementById('progressTotal').textContent = allArtworks.length;
+  document.getElementById('progressDone').textContent = LS.getDone().length;
+}
+
+function updateSectionHeader() {
+  document.getElementById('sectionCount').textContent = `총 ${filtered.length}개`;
+}
+
+// ══════════════════════════════════════════
+//  상세 페이지 열기 및 데이터 연결
+// ══════════════════════════════════════════
+function openDetail(idx) {
+  detailIndex = idx;
+  const aw = filtered[idx];
+  if (!aw) return;
+
+  // 데이터 연결하기
+  document.getElementById('detailImage').src = `images/${aw.id}.jpg`;
+  document.getElementById('detailTitleKo').textContent = aw.title_ko;
+  document.getElementById('detailTitleOrig').textContent = aw.title_original;
+  document.getElementById('detailArtistKo').textContent = aw.artist_ko;
+  document.getElementById('detailArtistOrig').textContent = aw.artist_original;
+  document.getElementById('detailRoom').textContent = `${aw.floor}F · ${aw.room}실`;
+  document.getElementById('detailDesc').innerHTML = aw.description || '작품 설명이 없습니다.';
+  
+  // 오디오 파일 연결하기
+  const audioEl = document.getElementById('audioEl');
+  audioEl.src = `audio/${aw.id}.mp3`;
+
+  // 페이지 열기
+  document.getElementById('detailPage').classList.add('open');
+}
+
+// 닫기 버튼 이벤트
+document.getElementById('detailBack').addEventListener('click', () => {
+  document.getElementById('detailPage').classList.remove('open');
+  document.getElementById('audioEl').pause(); // 상세페이지 나가면 오디오 정지
+});
+
+// 초기화 실행
+loadData();
