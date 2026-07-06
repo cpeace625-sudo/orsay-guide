@@ -58,5 +58,29 @@
     "rating": 4.5,
     "audio_duration": "3:12",
     "description": "기차의 증기와 연기, 철골 구조물 사이로 비치는 빛을 포착하여 현대 도시의 역동성을 인상주의 기법으로 그려냈습니다."
+  },
+  {
+    "id": "53401",
+    "floor": "5",
+    "room": "34",
+    "title_ko": "런던, 국회의사당",
+    "title_original": "Londres, le Parlement. Trouée de soleil dans le brouillard (1904)",
+    "artist_ko": "클로드 모네",
+    "artist_original": "Claude Monet",
+    "rating": 4.5,
+    "audio_duration": "2:10",
+    "description": "안개 낀 런던의 템스강 위로 햇빛이 스며드는 순간을 포착한 모네의 대표적인 연작 중 하나입니다. 빛과 대기가 만들어내는 몽환적이고 신비로운 색채 변화가 돋보입니다."
+  },
+  {
+    "id": "53402",
+    "floor": "5",
+    "room": "34",
+    "title_ko": "루앙 대성당 연작",
+    "title_original": "La Cathédrale de Rouen (série) (1892-1894)",
+    "artist_ko": "클로드 모네",
+    "artist_original": "Claude Monet",
+    "rating": 5.0,
+    "audio_duration": "2:01",
+    "description": "동일한 루앙 대성당 정면을 시간대와 날씨에 따라 다르게 변하는 빛의 모습을 기록하듯 그려낸 연작입니다. 인상주의 빛의 탐구를 보여주는 절정의 작품입니다."
   }
 ]
