@@ -192,3 +192,29 @@ audio { display: none; }
 
 @media (min-width: 431px) { .app { box-shadow: 0 0 0 0.5px rgba(0,0,0,0.08), 0 8px 40px rgba(0,0,0,0.08); } }
 ::-webkit-scrollbar { display: none; }
+/* Audio Player의 상단 정렬을 수정 */
+.audio-top {
+  align-items: center; /* 버튼과 정보가 세로 중앙 정렬되도록 */
+}
+
+/* 새로 추가된 배속 버튼 스타일 */
+.speed-btn {
+  flex-shrink: 0; /* 버튼 크기가 줄어들지 않도록 고정 */
+  width: 54px; /* 버튼 너비 고정 */
+  padding: 6px 0;
+  margin-left: 12px; /* 왼쪽 정보 영역과 간격 띄우기 */
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: #F2F2F7;
+  color: var(--navy);
+  font-size: 13px;
+  font-weight: 600;
+  font-family: inherit; /* 기본 폰트 적용 */
+  cursor: pointer;
+  transition: background-color 0.1s;
+}
+
+.speed-btn:active {
+  background-color: #E5E5EA; /* 클릭했을 때 색상 */
+}
+
