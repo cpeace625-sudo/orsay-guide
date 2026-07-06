@@ -46,6 +46,8 @@ let currentRoom   = 'all';
 let searchQuery   = '';
 let currentTab    = 'home';
 let detailIndex   = -1;
+const playbackSpeeds = [1.0, 1.25, 1.5, 2.0]; // 원하는 배속 목록
+let currentSpeedIndex = 0; // 현재 배속 인덱스
 
 // ══════════════════════════════════════════
 //  데이터 로드
@@ -257,6 +259,13 @@ function addEventListeners() {
     applyFiltersAndRender();
   });
   
+  document.getElementById('speedControlBtn').addEventListener('click', () => {
+    currentSpeedIndex = (currentSpeedIndex + 1) % playbackSpeeds.length; // 다음 배속 인덱스로 순환
+    const newSpeed = playbackSpeeds[currentSpeedIndex];
+    audioEl.playbackRate = newSpeed;
+    document.getElementById('speedControlBtn').textContent = `${newSpeed.toFixed(2)}x`.replace('.00','');
+});
+  
   // 상세 페이지 이벤트
   document.getElementById('detailBack').addEventListener('click', closeDetail);
   document.getElementById('detailFavBtn').addEventListener('click', () => {
@@ -278,12 +287,19 @@ const audioEl = document.getElementById('audioEl');
 let audioId = null;
 
 function loadAudio(aw) {
-  if (audioId === aw.id) return;
+  // 다른 트랙을 로드하면 배속을 1.0x로 리셋
+  currentSpeedIndex = 0;
+  audioEl.playbackRate = playbackSpeeds[0];
+  document.getElementById('speedControlBtn').textContent = `${playbackSpeeds[0].toFixed(1)}x`;
+
+  if (audioId === aw.id) return; // 이미 같은 오디오가 로드되어 있으면 여기서 멈춤
+  
   audioId = aw.id;
   const wasPlaying = !audioEl.paused;
   audioEl.src = `./audio/${aw.id}.mp3`;
   audioEl.load();
   if (wasPlaying) audioEl.play().catch(()=>{});
+  
   updateMiniPlayer(aw);
   setMediaSession(aw);
 }
