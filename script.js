@@ -259,13 +259,6 @@ function addEventListeners() {
     applyFiltersAndRender();
   });
   
-  document.getElementById('speedControlBtn').addEventListener('click', () => {
-    currentSpeedIndex = (currentSpeedIndex + 1) % playbackSpeeds.length; // 다음 배속 인덱스로 순환
-    const newSpeed = playbackSpeeds[currentSpeedIndex];
-    audioEl.playbackRate = newSpeed;
-    document.getElementById('speedControlBtn').textContent = `${newSpeed.toFixed(2)}x`.replace('.00','');
-});
-  
   // 상세 페이지 이벤트
   document.getElementById('detailBack').addEventListener('click', closeDetail);
   document.getElementById('detailFavBtn').addEventListener('click', () => {
@@ -278,8 +271,24 @@ function addEventListeners() {
     const card = cardList.querySelector(`.artwork-card[data-id='${id}']`);
     if(card) card.classList.toggle('is-done', LS.isDone(id));
   });
-}
 
+  // ▼▼▼ 1. 미니플레이어 클릭 이벤트 ▼▼▼
+  document.getElementById('miniPlayer').addEventListener('click', e => {
+    if (e.target.closest('.mini-controls')) return; // 재생/정지 버튼은 제외
+    const currentPlayingIndex = filtered.findIndex(aw => aw.id === audioId);
+    if (currentPlayingIndex > -1) {
+      openDetail(currentPlayingIndex);
+    }
+  });
+
+  // ▼▼▼ 2. 상세 페이지 재생바 조절 이벤트 ▼▼▼
+  document.getElementById('audioProgressWrap').addEventListener('click', e => {
+    if (!audioEl.duration) return;
+    const rect = e.currentTarget.getBoundingClientRect();
+    const newTime = ((e.clientX - rect.left) / rect.width) * audioEl.duration;
+    audioEl.currentTime = newTime;
+  });
+}
 // ══════════════════════════════════════════
 //  오디오 엔진 & 미니 플레이어
 // ══════════════════════════════════════════
