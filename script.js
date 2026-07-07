@@ -46,11 +46,11 @@ let currentRoom   = 'all';
 let searchQuery   = '';
 let currentTab    = 'home';
 let detailIndex   = -1;
-const playbackSpeeds = [1.0, 1.25, 1.5, 2.0]; // 배속 목록
-let currentSpeedIndex = 0; // 현재 배속 인덱스
+const playbackSpeeds = [1.0, 1.25, 1.5, 2.0];
+let currentSpeedIndex = 0;
 
 // ══════════════════════════════════════════
-//  데이터 로드
+//  데이터 로드 및 초기화
 // ══════════════════════════════════════════
 async function loadData() {
   try {
@@ -64,9 +64,6 @@ async function loadData() {
   init();
 }
 
-// ══════════════════════════════════════════
-//  초기화
-// ══════════════════════════════════════════
 function init() {
   buildFloorTabs();
   updateProgress();
@@ -75,7 +72,7 @@ function init() {
 }
 
 // ══════════════════════════════════════════
-//  탭 생성
+//  UI 빌드 및 렌더링
 // ══════════════════════════════════════════
 function buildFloorTabs() {
   const floors = [...new Set(allArtworks.map(a => a.floor))].sort((a,b) => Number(b) - Number(a));
@@ -99,9 +96,6 @@ function buildRoomTabs() {
   container.innerHTML = html;
 }
 
-// ══════════════════════════════════════════
-//  필터 & 렌더링
-// ══════════════════════════════════════════
 function applyFiltersAndRender() {
   const q = searchQuery.trim().toLowerCase();
   let source;
@@ -114,11 +108,9 @@ function applyFiltersAndRender() {
     );
   } else {
     source = allArtworks;
-    if (currentTab === 'favorites') {
-      source = allArtworks.filter(a => LS.isFav(a.id));
-    } else if (currentTab === 'done') {
-      source = allArtworks.filter(a => LS.isDone(a.id));
-    } else {
+    if (currentTab === 'favorites') source = allArtworks.filter(a => LS.isFav(a.id));
+    else if (currentTab === 'done') source = allArtworks.filter(a => LS.isDone(a.id));
+    else {
       if (currentFloor) source = source.filter(a => a.floor === currentFloor);
       if (currentRoom !== 'all') source = source.filter(a => a.room === currentRoom);
     }
@@ -170,7 +162,6 @@ function cardHTML(aw, idx) {
       <div class="card-artist-orig">${aw.artist_original}</div>
       <div class="card-meta">
         <span class="card-room">${aw.floor}F · ${aw.room}실</span>
-        <!-- 목록에서 오디오 시간 숨김 처리 (주석 처리됨) -->
         <!-- <span class="card-duration"><svg viewBox="0 0 24 24" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>${aw.audio_duration}</span> -->
         <span class="card-stars">${starsSVG(aw.rating, 10)}</span>
       </div>
@@ -194,9 +185,112 @@ function updateProgress() {
 }
 
 // ══════════════════════════════════════════
-//  이벤트 리스너
+//  오디오 엔진 & 미니 플레이어
+// ══════════════════════════════════════════
+const audioEl = document.getElementById('audioEl');
+let audioId = null;
+
+function loadAudio(aw) {
+  currentSpeedIndex = 0;
+  audioEl.playbackRate = playbackSpeeds[0];
+  document.getElementById('speedControlBtn').textContent = `${playbackSpeeds[0].toFixed(1)}x`;
+
+  if (audioId === aw.id) return;
+  
+  audioId = aw.id;
+  const wasPlaying = !audioEl.paused;
+  audioEl.src = `./audio/${aw.id}.mp3`;
+  audioEl.load();
+  if (wasPlaying) audioEl.play().catch(()=>{});
+  
+  updateMiniPlayer(aw);
+  setMediaSession(aw);
+}
+
+function togglePlay() { audioEl.paused ? audioEl.play().catch(()=>{}) : audioEl.pause(); }
+
+function syncAudioUI() {
+  const playing = !audioEl.paused;
+  document.getElementById('audioPlayBtn').classList.toggle('playing', playing);
+  const miniBtn = document.getElementById('miniPlayBtn');
+  miniBtn.classList.toggle('playing', playing);
+  miniBtn.querySelector('.icon-play').style.display  = playing ? 'none' : 'block';
+  miniBtn.querySelector('.icon-pause').style.display = playing ? 'block' : 'none';
+  document.getElementById('miniPlayer').classList.toggle('visible', audioId !== null && (playing || audioEl.currentTime > 0));
+}
+
+function updateMiniPlayer(aw) {
+  document.getElementById('miniTitle').textContent = aw.title_ko;
+  document.getElementById('miniArtist').textContent = aw.artist_ko;
+  document.getElementById('miniThumb').src = `./images/${aw.id}.jpg`;
+}
+
+function setMediaSession(aw) {
+  if (!('mediaSession' in navigator)) return;
+  navigator.mediaSession.metadata = new MediaMetadata({ title: aw.title_ko, artist: aw.artist_ko, album: "Musée d'Orsay 오디오 가이드" });
+  ['play', 'pause'].forEach(action => {
+      try { navigator.mediaSession.setActionHandler(action, () => { togglePlay(); }); }
+      catch (e) { console.warn(`Media Session action '${action}' not supported.`); }
+  });
+}
+
+// ══════════════════════════════════════════
+//  상세 페이지
+// ══════════════════════════════════════════
+function openDetail(idx) {
+  detailIndex = idx;
+  const aw = filtered[idx];
+  if (!aw) return;
+  document.getElementById('detailPage').classList.add('open');
+  document.body.style.overflow = 'hidden';
+  document.getElementById('detailImage').src = `./images/${aw.id}.jpg`;
+  document.getElementById('detailRoom').textContent = `${aw.floor}층 · ${aw.room}실`;
+  document.getElementById('detailTitleKo').textContent = aw.title_ko;
+  document.getElementById('detailTitleOrig').textContent = aw.title_original;
+  document.getElementById('detailArtistKo').textContent = aw.artist_ko;
+  document.getElementById('detailArtistOrig').textContent = aw.artist_original;
+  document.getElementById('detailStars').innerHTML = starsSVG(aw.rating, 14);
+  document.getElementById('detailDesc').textContent = aw.description;
+  refreshDetailState(aw.id);
+  loadAudio(aw);
+  renderRelatedWorks(aw);
+}
+
+function closeDetail() {
+  document.getElementById('detailPage').classList.remove('open');
+  document.body.style.overflow = '';
+}
+
+function refreshDetailState(id) {
+  document.getElementById('detailFavBtn').classList.toggle('fav-active', LS.isFav(id));
+  document.getElementById('detailDoneBtn').classList.toggle('done-active', LS.isDone(id));
+  document.getElementById('detailDoneBadge').classList.toggle('visible', LS.isDone(id));
+}
+
+function renderRelatedWorks(currentAw) {
+  const container = document.getElementById('relatedWorks');
+  const related = allArtworks.filter(a => a.room === currentAw.room && a.id !== currentAw.id && !LS.isDone(a.id));
+  if (related.length === 0) {
+    container.innerHTML = ''; return;
+  }
+  container.innerHTML = `
+    <div class="related-title">이 방의 다른 작품</div>
+    ${related.map(a => `
+      <div class="related-card" data-id="${a.id}">
+        <div class="related-thumb"><img src="./images/${a.id}.jpg" loading="lazy"></div>
+        <div class="related-info">
+          <div class="title">${a.title_ko}</div>
+          <div class="artist">${a.artist_ko}</div>
+        </div>
+      </div>
+    `).join('')}`;
+}
+
+// ══════════════════════════════════════════
+//  이벤트 리스너 (모든 사용자 입력 처리)
 // ══════════════════════════════════════════
 function addEventListeners() {
+  // --- 메인 목록 ---
   const cardList = document.getElementById('cardList');
   cardList.addEventListener('click', e => {
     const card = e.target.closest('.artwork-card');
@@ -244,6 +338,7 @@ function addEventListeners() {
     }
   });
 
+  // --- 검색 ---
   const searchInput = document.getElementById('searchInput');
   const searchClear = document.getElementById('searchClear');
   searchInput.addEventListener('input', () => {
@@ -258,7 +353,7 @@ function addEventListeners() {
     applyFiltersAndRender();
   });
   
-  // 상세 페이지 상단 버튼 이벤트
+  // --- 상세 페이지 ---
   document.getElementById('detailBack').addEventListener('click', closeDetail);
   document.getElementById('detailFavBtn').addEventListener('click', () => {
     const id = filtered[detailIndex].id; LS.toggleFav(id); refreshDetailState(id);
@@ -270,197 +365,69 @@ function addEventListeners() {
     const card = cardList.querySelector(`.artwork-card[data-id='${id}']`);
     if(card) card.classList.toggle('is-done', LS.isDone(id));
   });
-
-  // 미니플레이어 클릭 이벤트 (상세 페이지로 이동)
-  document.getElementById('miniPlayer').addEventListener('click', e => {
-    if (e.target.closest('.mini-controls')) return; 
-    const currentPlayingIndex = filtered.findIndex(aw => aw.id === audioId);
-    if (currentPlayingIndex > -1) {
-      openDetail(currentPlayingIndex);
+  document.getElementById('relatedWorks').addEventListener('click', (e) => {
+    const card = e.target.closest('.related-card');
+    if(card) {
+      const newIdx = filtered.findIndex(item => item.id === card.dataset.id);
+      if (newIdx > -1) openDetail(newIdx);
     }
   });
 
-  // 배속 버튼 클릭 이벤트
+  // --- 오디오 플레이어 ---
+  document.getElementById('miniPlayer').addEventListener('click', e => {
+    if (e.target.closest('.mini-controls')) return; 
+    const currentPlayingIndex = filtered.findIndex(aw => aw.id === audioId);
+    if (currentPlayingIndex > -1) openDetail(currentPlayingIndex);
+  });
   document.getElementById('speedControlBtn').addEventListener('click', () => {
     currentSpeedIndex = (currentSpeedIndex + 1) % playbackSpeeds.length;
     const newSpeed = playbackSpeeds[currentSpeedIndex];
     audioEl.playbackRate = newSpeed;
     document.getElementById('speedControlBtn').textContent = `${newSpeed.toFixed(1)}x`;
   });
-}
-
-// ══════════════════════════════════════════
-//  오디오 엔진 & 미니 플레이어 (재생바 드래그 로직 포함)
-// ══════════════════════════════════════════
-const audioEl = document.getElementById('audioEl');
-let audioId = null;
-
-function loadAudio(aw) {
-  // 배속 1.0x 초기화
-  currentSpeedIndex = 0;
-  audioEl.playbackRate = playbackSpeeds[0];
-  document.getElementById('speedControlBtn').textContent = `${playbackSpeeds[0].toFixed(1)}x`;
-
-  if (audioId === aw.id) return;
-  
-  audioId = aw.id;
-  const wasPlaying = !audioEl.paused;
-  audioEl.src = `./audio/${aw.id}.mp3`;
-  audioEl.load();
-  if (wasPlaying) audioEl.play().catch(()=>{});
-  
-  updateMiniPlayer(aw);
-  setMediaSession(aw);
-}
-
-function togglePlay() { audioEl.paused ? audioEl.play().catch(()=>{}) : audioEl.pause(); }
-
-function syncAudioUI() {
-  const playing = !audioEl.paused;
-  document.getElementById('audioPlayBtn').classList.toggle('playing', playing);
-  const miniBtn = document.getElementById('miniPlayBtn');
-  miniBtn.classList.toggle('playing', playing);
-  miniBtn.querySelector('.icon-play').style.display  = playing ? 'none' : 'block';
-  miniBtn.querySelector('.icon-pause').style.display = playing ? 'block' : 'none';
-  document.getElementById('miniPlayer').classList.toggle('visible', audioId !== null && (playing || audioEl.currentTime > 0));
-}
-
-function updateMiniPlayer(aw) {
-  document.getElementById('miniTitle').textContent = aw.title_ko;
-  document.getElementById('miniArtist').textContent = aw.artist_ko;
-  document.getElementById('miniThumb').src = `./images/${aw.id}.jpg`;
-}
-
-function setMediaSession(aw) {
-  if (!('mediaSession' in navigator)) return;
-  navigator.mediaSession.metadata = new MediaMetadata({ title: aw.title_ko, artist: aw.artist_ko, album: "Musée d'Orsay 오디오 가이드" });
-  ['play', 'pause'].forEach(action => {
-      try { navigator.mediaSession.setActionHandler(action, () => { togglePlay(); }); }
-      catch (e) { console.warn(`Media Session action '${action}' not supported.`); }
+  audioEl.addEventListener('timeupdate', () => {
+    if (isSeeking) return; // 드래그 중에는 시간 업데이트 방지
+    const cur = audioEl.currentTime, dur = audioEl.duration || 0;
+    const pct = dur ? (cur / dur * 100) : 0;
+    document.getElementById('audioCurrent').textContent = fmtTime(cur);
+    document.getElementById('audioProgressBar').style.width = `${pct}%`;
+    document.getElementById('miniProgressBar').style.width = `${pct}%`;
   });
-}
+  audioEl.addEventListener('loadedmetadata', () => { document.getElementById('audioTotal').textContent = fmtTime(audioEl.duration); });
+  audioEl.addEventListener('play', syncAudioUI);
+  audioEl.addEventListener('pause', syncAudioUI);
+  audioEl.addEventListener('ended', () => {
+    if (audioId && !LS.isDone(audioId)) { LS.toggleDone(audioId); updateProgress(); refreshDetailState(audioId); renderList(); }
+    syncAudioUI();
+  });
+  document.getElementById('miniPlayBtn').addEventListener('click', togglePlay);
+  document.getElementById('audioPlayBtn').addEventListener('click', togglePlay);
 
-audioEl.addEventListener('timeupdate', () => {
-  const cur = audioEl.currentTime, dur = audioEl.duration || 0;
-  const pct = dur ? (cur/dur*100) : 0;
-  document.getElementById('audioCurrent').textContent = fmtTime(cur);
-  document.getElementById('audioProgressBar').style.width = `${pct}%`;
-  document.getElementById('miniProgressBar').style.width = `${pct}%`;
-});
-
-audioEl.addEventListener('loadedmetadata', () => { 
-  document.getElementById('audioTotal').textContent = fmtTime(audioEl.duration); 
-});
-audioEl.addEventListener('play', syncAudioUI);
-audioEl.addEventListener('pause', syncAudioUI);
-audioEl.addEventListener('ended', () => {
-  if (audioId && !LS.isDone(audioId)) { LS.toggleDone(audioId); updateProgress(); refreshDetailState(audioId); renderList(); }
-  syncAudioUI();
-});
-
-document.getElementById('miniPlayBtn').addEventListener('click', togglePlay);
-document.getElementById('audioPlayBtn').addEventListener('click', togglePlay);
-
-// --- 재생바 클릭 및 드래그(끌기) 로직 ---
-const progressBar = document.getElementById('audioProgressWrap');
-let isSeeking = false;
-
-const startSeeking = (e) => {
-  if (!audioEl.duration) return;
-  isSeeking = true;
-  seek(e);
-};
-
-const stopSeeking = () => {
-  isSeeking = false;
-};
-
-const seek = (e) => {
-  if (!isSeeking || !audioEl.duration) return;
-  const rect = progressBar.getBoundingClientRect();
-  const clientX = e.touches ? e.touches[0].clientX : e.clientX;
-  let newTime = ((clientX - rect.left) / rect.width) * audioEl.duration;
-  
-  if (newTime < 0) newTime = 0;
-  if (newTime > audioEl.duration) newTime = audioEl.duration;
-  
-  audioEl.currentTime = newTime;
-};
-
-// PC 마우스 이벤트
-progressBar.addEventListener('mousedown', startSeeking);
-window.addEventListener('mousemove', seek);
-window.addEventListener('mouseup', stopSeeking);
-
-// 모바일 터치 이벤트
-progressBar.addEventListener('touchstart', startSeeking, {passive: true});
-window.addEventListener('touchmove', seek, {passive: false});
-window.addEventListener('touchend', stopSeeking);
-
-// ══════════════════════════════════════════
-//  상세 페이지
-// ══════════════════════════════════════════
-function openDetail(idx) {
-  detailIndex = idx;
-  const aw = filtered[idx];
-  if (!aw) return;
-  document.getElementById('detailPage').classList.add('open');
-  document.body.style.overflow = 'hidden';
-
-  document.getElementById('detailImage').src = `./images/${aw.id}.jpg`;
-  document.getElementById('detailRoom').textContent = `${aw.floor}층 · ${aw.room}실`;
-  document.getElementById('detailTitleKo').textContent = aw.title_ko;
-  document.getElementById('detailTitleOrig').textContent = aw.title_original;
-  document.getElementById('detailArtistKo').textContent = aw.artist_ko;
-  document.getElementById('detailArtistOrig').textContent = aw.artist_original;
-  document.getElementById('detailStars').innerHTML = starsSVG(aw.rating, 14);
-  document.getElementById('detailDesc').textContent = aw.description;
-
-  refreshDetailState(aw.id);
-  loadAudio(aw);
-  renderRelatedWorks(aw);
-}
-
-function closeDetail() {
-  document.getElementById('detailPage').classList.remove('open');
-  document.body.style.overflow = '';
-}
-
-function refreshDetailState(id) {
-  document.getElementById('detailFavBtn').classList.toggle('fav-active', LS.isFav(id));
-  document.getElementById('detailDoneBtn').classList.toggle('done-active', LS.isDone(id));
-  document.getElementById('detailDoneBadge').classList.toggle('visible', LS.isDone(id));
-}
-
-function renderRelatedWorks(currentAw) {
-  const container = document.getElementById('relatedWorks');
-  const related = allArtworks.filter(a =>
-    a.room === currentAw.room && a.id !== currentAw.id && !LS.isDone(a.id)
-  );
-  if (related.length === 0) {
-    container.innerHTML = '';
-    return;
-  }
-  container.innerHTML = `
-    <div class="related-title">이 방의 다른 작품</div>
-    ${related.map(a => `
-      <div class="related-card" data-id="${a.id}">
-        <div class="related-thumb"><img src="./images/${a.id}.jpg" loading="lazy"></div>
-        <div class="related-info">
-          <div class="title">${a.title_ko}</div>
-          <div class="artist">${a.artist_ko}</div>
-        </div>
-      </div>
-    `).join('')}`;
+  // --- 재생바 드래그 로직 ---
+  const progressBar = document.getElementById('audioProgressWrap');
+  let isSeeking = false;
+  const startSeeking = (e) => { if (!audioEl.duration) return; isSeeking = true; seek(e); };
+  const stopSeeking = () => { isSeeking = false; };
+  const seek = (e) => {
+    if (!isSeeking) return;
+    e.preventDefault();
+    const rect = progressBar.getBoundingClientRect();
+    const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+    let newTime = ((clientX - rect.left) / rect.width) * audioEl.duration;
+    if (newTime < 0) newTime = 0;
+    if (newTime > audioEl.duration) newTime = audioEl.duration;
+    audioEl.currentTime = newTime;
     
-  container.querySelectorAll('.related-card').forEach(card => {
-      card.addEventListener('click', () => {
-          const newIdx = filtered.findIndex(item => item.id === card.dataset.id);
-          if (newIdx > -1) {
-              openDetail(newIdx);
-          }
-      });
-  });
+    // 드래그 중에도 시간 표시 업데이트
+    document.getElementById('audioCurrent').textContent = fmtTime(newTime);
+    document.getElementById('audioProgressBar').style.width = `${(newTime / audioEl.duration * 100)}%`;
+  };
+  progressBar.addEventListener('mousedown', startSeeking);
+  window.addEventListener('mousemove', seek);
+  window.addEventListener('mouseup', stopSeeking);
+  progressBar.addEventListener('touchstart', startSeeking, { passive: true });
+  window.addEventListener('touchmove', seek, { passive: false });
+  window.addEventListener('touchend', stopSeeking);
 }
 
 // App Start
