@@ -6,8 +6,11 @@
   <meta name="theme-color" content="#FAFAF8" />
   <title>Musée d'Orsay</title>
   <link rel="manifest" href="./manifest.json" />
-  <link rel="stylesheet" href="./style.css" />
-  <script src="./script.js" defer></script>
+  
+  <!-- ★ 마법의 트릭: 뒤에 ?v=2 를 붙여서 무조건 최신 코드를 불러오게 강제합니다 ★ -->
+  <link rel="stylesheet" href="./style.css?v=2" />
+  <script src="./script.js?v=2" defer></script>
+  
 </head>
 <body>
 <div class="app">
@@ -37,7 +40,7 @@
     </div>
   </div>
 
-  <!-- ★ 오프라인 전체 다운로드 버튼 추가 ★ -->
+  <!-- 오프라인 다운로드 버튼 -->
   <div class="offline-wrap">
     <button id="downloadAllBtn" class="download-btn">
       <svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
@@ -155,7 +158,6 @@
       <div class="detail-desc" id="detailDesc"></div>
       
       <div id="relatedWorks"></div>
-
     </div>
   </div>
 </div>
