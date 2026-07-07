@@ -1,0 +1,16 @@
+{
+  "name": "오르세 오디오 가이드",
+  "short_name": "오르세 가이드",
+  "description": "오르세 미술관 셀프 오디오 가이드",
+  "start_url": "./index.html",
+  "display": "standalone",
+  "background_color": "#FAFAF8",
+  "theme_color": "#20364F",
+  "icons": [
+    {
+      "src": "https://placehold.co/512x512/20364F/FFFFFF?text=Orsay",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}
