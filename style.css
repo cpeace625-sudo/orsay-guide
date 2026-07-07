@@ -1,500 +1,204 @@
-// ══════════════════════════════════════════
-//  유틸
-// ══════════════════════════════════════════
-function fmtTime(sec) {
-  if (!sec || isNaN(sec)) return '0:00';
-  return `${Math.floor(sec/60)}:${Math.floor(sec%60).toString().padStart(2,'0')}`;
+* { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+
+:root {
+  --navy:       #20364F;
+  --navy-light: #E8EEF4;
+  --bg:         #FAFAF8;
+  --bg-card:    #FFFFFF;
+  --text-1:     #1C1C1E;
+  --text-2:     #3C3C43;
+  --text-3:     #8E8E93;
+  --border:     #E5E5EA;
+  --shadow:     0 1px 3px rgba(0,0,0,0.07), 0 0 0 0.5px rgba(0,0,0,0.04);
 }
 
-function starsSVG(rating, size=10) {
-  return [1,2,3,4,5].map(i => {
-    const fill = rating >= i ? '#FF9500' : (rating >= i-0.5 ? '#FF9500' : '#E5E5EA');
-    const opacity = (rating >= i-0.5 && rating < i) ? '0.5' : '1';
-    return `<svg width="${size}" height="${size}" viewBox="0 0 24 24" style="opacity:${opacity}">
-      <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" fill="${fill}" stroke="none"/>
-    </svg>`;
-  }).join('');
+html, body {
+  height: 100%; background: var(--bg); color: var(--text-1);
+  font-family: -apple-system, 'Apple SD Gothic Neo', 'Noto Sans KR', sans-serif;
+  overscroll-behavior: none;
 }
 
-// ══════════════════════════════════════════
-//  LocalStorage
-// ══════════════════════════════════════════
-const LS = {
-  getFavs : ()  => JSON.parse(localStorage.getItem('orsay_favs') || '[]'),
-  getDone : ()  => JSON.parse(localStorage.getItem('orsay_done') || '[]'),
-  setFavs : v   => localStorage.setItem('orsay_favs', JSON.stringify(v)),
-  setDone : v   => localStorage.setItem('orsay_done', JSON.stringify(v)),
-  isFav   : id  => LS.getFavs().includes(String(id)),
-  isDone  : id  => LS.getDone().includes(String(id)),
-  toggleFav(id) {
-    let a = LS.getFavs(); const s = String(id);
-    LS.setFavs(a.includes(s) ? a.filter(x=>x!==s) : [...a, s]);
-  },
-  toggleDone(id) {
-    let a = LS.getDone(); const s = String(id);
-    LS.setDone(a.includes(s) ? a.filter(x=>x!==s) : [...a, s]);
-  }
-};
-
-// ══════════════════════════════════════════
-//  전역 상태
-// ══════════════════════════════════════════
-let allArtworks   = [];
-let filtered      = [];
-let currentFloor  = null;
-let currentRoom   = 'all';
-let searchQuery   = '';
-let currentTab    = 'home';
-let detailIndex   = -1;
-const playbackSpeeds = [1.0, 1.25, 1.5, 2.0];
-let currentSpeedIndex = 0;
-
-// ══════════════════════════════════════════
-//  데이터 로드
-// ══════════════════════════════════════════
-async function loadData() {
-  try {
-    const res = await fetch('./artworks.json');
-    if (!res.ok) throw new Error('fetch fail');
-    allArtworks = await res.json();
-  } catch {
-    console.error('artworks.json 불러오기 실패');
-    document.getElementById('cardList').innerHTML = `<div class="state-box"><div class="emoji">😥</div>데이터를 불러오지 못했습니다.</div>`;
-  }
-  init();
+.app {
+  max-width: 430px; margin: 0 auto; min-height: 100%;
+  display: flex; flex-direction: column; background: var(--bg);
+  padding-top: env(safe-area-inset-top);
 }
 
-function init() {
-  buildFloorTabs();
-  updateProgress();
-  applyFiltersAndRender();
-  addEventListeners();
+/* ── Header ── */
+.header { padding: 16px 20px 0; flex-shrink: 0; }
+.header-top { display: flex; justify-content: space-between; align-items: flex-end; }
+.header-museum { font-size: 12px; font-weight: 600; color: var(--navy); letter-spacing: 0.1em; text-transform: uppercase; margin-bottom: 2px; }
+.header-title { font-size: 24px; font-weight: 700; color: var(--text-1); letter-spacing: -0.4px; line-height: 1.2; }
+.header-progress { font-size: 13px; color: var(--text-3); font-weight: 500; text-align: right; line-height: 1.3; }
+.header-progress strong { color: var(--navy); font-weight: 700; }
+
+/* ── Search ── */
+.search-wrap { padding: 14px 16px 10px; flex-shrink: 0; }
+.search-box { display: flex; align-items: center; gap: 8px; background: #EFEFEF; border-radius: 12px; padding: 10px 14px; }
+.search-box svg { width: 16px; height: 16px; flex-shrink: 0; }
+.search-box input { background: none; border: none; outline: none; color: var(--text-1); font-size: 16px; width: 100%; font-family: inherit; }
+.search-box input::placeholder { color: var(--text-3); }
+.search-clear { width: 18px; height: 18px; border-radius: 50%; background: #AEAEB2; border: none; cursor: pointer; display: none; align-items: center; justify-content: center; flex-shrink: 0; }
+.search-clear svg { width: 9px; height: 9px; stroke: #fff; fill: none; stroke-width: 2.5; stroke-linecap: round; }
+.search-clear.visible { display: flex; }
+
+/* ★ 다운로드 버튼 ★ */
+.offline-wrap { padding: 0 16px 10px; flex-shrink: 0; }
+.download-btn {
+  width: 100%; padding: 10px; border-radius: 10px; border: none;
+  background: var(--navy-light); color: var(--navy);
+  font-size: 13px; font-weight: 600; font-family: inherit;
+  display: flex; align-items: center; justify-content: center; gap: 6px;
+  cursor: pointer; transition: all 0.2s;
 }
+.download-btn:active { background: #D0DCE8; }
+.download-btn svg { width: 15px; height: 15px; stroke: currentColor; fill: none; stroke-width: 2.5; stroke-linecap: round; }
+.download-btn.downloading { background: #F2F2F7; color: var(--text-3); pointer-events: none; }
+.download-btn.completed { background: #E3F9E5; color: #34C759; pointer-events: none; }
 
-// ══════════════════════════════════════════
-//  UI 빌드 및 렌더링
-// ══════════════════════════════════════════
-function buildFloorTabs() {
-  const floors = [...new Set(allArtworks.map(a => a.floor))].sort((a,b) => Number(b) - Number(a));
-  currentFloor = floors.includes('5') ? '5' : floors[0];
-  const container = document.getElementById('floorTabs');
-  container.innerHTML = floors.map(f =>
-    `<button class="floor-tab ${f === currentFloor ? 'active' : ''}" data-floor="${f}">[${f}층]</button>`
-  ).join('');
-  buildRoomTabs();
-}
+/* ── Floor Tabs ── */
+.floor-wrap { padding: 6px 16px 0; flex-shrink: 0; }
+.floor-tabs { display: flex; gap: 8px; }
+.floor-tab { padding: 7px 18px; border-radius: 10px; font-size: 14px; font-weight: 600; cursor: pointer; border: 1.5px solid var(--border); color: var(--text-2); background: var(--bg-card); font-family: inherit; transition: all 0.15s; }
+.floor-tab.active { background: var(--navy); border-color: var(--navy); color: #fff; }
 
-function buildRoomTabs() {
-  const rooms = [...new Set(allArtworks.filter(a => a.floor === currentFloor).map(a => a.room))]
-    .sort((a,b) => {
-      const na = parseInt(a), nb = parseInt(b);
-      return isNaN(na) || isNaN(nb) ? a.localeCompare(b) : na - nb;
-    });
-  const container = document.getElementById('roomTabs');
-  let html = `<button class="room-tab ${currentRoom === 'all' ? 'active' : ''}" data-room="all">전체</button>`;
-  html += rooms.map(r => `<button class="room-tab" data-room="${r}">${r}실</button>`).join('');
-  container.innerHTML = html;
-}
+/* ── Room Tabs ── */
+.room-wrap { padding: 10px 0 0; flex-shrink: 0; overflow-x: auto; scrollbar-width: none; }
+.room-wrap::-webkit-scrollbar { display: none; }
+.room-scroll { display: flex; gap: 6px; padding: 0 16px; width: max-content; }
+.room-tab { padding: 5px 12px; border-radius: 8px; font-size: 13px; font-weight: 500; cursor: pointer; border: 1px solid var(--border); color: var(--text-3); background: var(--bg-card); font-family: inherit; transition: all 0.15s; white-space: nowrap; }
+.room-tab.active { background: var(--navy-light); border-color: var(--navy); color: var(--navy); font-weight: 700; }
 
-function applyFiltersAndRender() {
-  const q = searchQuery.trim().toLowerCase();
-  let source;
+/* ── Section Header ── */
+.section-header { padding: 14px 16px 8px; display: flex; justify-content: space-between; align-items: center; flex-shrink: 0; }
+.section-title { font-size: 15px; font-weight: 600; color: var(--text-1); }
+.section-count { font-size: 13px; color: var(--text-3); }
 
-  if (q) {
-    source = allArtworks.filter(a =>
-      a.title_ko.toLowerCase().includes(q) || a.title_original.toLowerCase().includes(q) ||
-      a.artist_ko.toLowerCase().includes(q) || a.artist_original.toLowerCase().includes(q) ||
-      String(a.room).toLowerCase().includes(q)
-    );
-  } else {
-    source = allArtworks;
-    if (currentTab === 'favorites') source = allArtworks.filter(a => LS.isFav(a.id));
-    else if (currentTab === 'done') source = allArtworks.filter(a => LS.isDone(a.id));
-    else {
-      if (currentFloor) source = source.filter(a => a.floor === currentFloor);
-      if (currentRoom !== 'all') source = source.filter(a => a.room === currentRoom);
-    }
-  }
-  filtered = source;
-  renderList();
-  updateSectionHeader();
-}
+/* ── Card List ── */
+.card-list { flex: 1; overflow-y: auto; padding: 0 16px 100px; scrollbar-width: none; display: flex; flex-direction: column; gap: 1px; }
+.card-list::-webkit-scrollbar { display: none; }
+.card-group { background: var(--bg-card); border-radius: 14px; overflow: hidden; box-shadow: var(--shadow); margin-bottom: 8px; }
+.card-group-label { padding: 8px 14px 6px; font-size: 11px; font-weight: 600; color: var(--text-3); letter-spacing: 0.06em; text-transform: uppercase; border-bottom: 0.5px solid var(--border); background: #FAFAFA; }
 
-function renderList() {
-  const container = document.getElementById('cardList');
-  if (filtered.length === 0) {
-    container.innerHTML = `<div class="state-box"><div class="emoji">🔍</div>작품을 찾을 수 없습니다.</div>`;
-    return;
-  }
-  const isGrouped = !searchQuery && currentTab === 'home';
-  if (isGrouped) {
-    const roomMap = {};
-    filtered.forEach((a, i) => {
-      if (!roomMap[a.room]) roomMap[a.room] = [];
-      roomMap[a.room].push({ a, i });
-    });
-    container.innerHTML = Object.keys(roomMap)
-      .sort((a,b) => { const na=parseInt(a), nb=parseInt(b); return isNaN(na) || isNaN(nb) ? a.localeCompare(b) : na - nb; })
-      .map(room => `
-        <div class="card-group">
-          <div class="card-group-label">${currentFloor}층 · ${room}실</div>
-          ${roomMap[room].map(({a, i}) => cardHTML(a, i)).join('')}
-        </div>
-      `).join('');
-  } else {
-    container.innerHTML = `<div class="card-group">${filtered.map((a, i) => cardHTML(a, i)).join('')}</div>`;
-  }
-}
+/* ── Artwork Card ── */
+.artwork-card { display: flex; align-items: center; gap: 14px; padding: 14px; cursor: pointer; background: var(--bg-card); transition: background 0.1s; position: relative; }
+.artwork-card:active { background: #F2F2F7; }
+.artwork-card + .artwork-card { border-top: 0.5px solid var(--border); }
+.card-thumb { width: 88px; height: 88px; border-radius: 10px; overflow: hidden; flex-shrink: 0; background: #F2F2F7; position: relative; }
+.card-thumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.done-badge { position: absolute; top: 4px; right: 4px; width: 18px; height: 18px; border-radius: 50%; background: #34C759; display: none; align-items: center; justify-content: center; border: 1.5px solid #fff; }
+.done-badge svg { width: 9px; height: 9px; stroke: #fff; fill: none; stroke-width: 3; stroke-linecap: round; stroke-linejoin: round; }
+.artwork-card.is-done .done-badge { display: flex; }
 
-function cardHTML(aw, idx) {
-  const done = LS.isDone(aw.id);
-  const fav = LS.isFav(aw.id);
-  return `
-  <div class="artwork-card ${done ? 'is-done' : ''}" data-id="${aw.id}" data-idx="${idx}">
-    <div class="card-thumb">
-      <img src="./images/${aw.id}.jpg" alt="${aw.title_ko}" onerror="this.src='https://placehold.co/88x88/F2F2F7/8E8E93?text=No'" />
-      <div class="done-badge"><svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg></div>
-    </div>
-    <div class="card-body">
-      <div class="card-title-ko">${aw.title_ko}</div>
-      <div class="card-title-orig">${aw.title_original}</div>
-      <div class="card-artist-ko">${aw.artist_ko}</div>
-      <div class="card-artist-orig">${aw.artist_original}</div>
-      <div class="card-meta">
-        <span class="card-room">${aw.floor}F · ${aw.room}실</span>
-        <span class="card-stars">${starsSVG(aw.rating, 10)}</span>
-      </div>
-    </div>
-    <button class="card-fav-btn ${fav ? 'active' : ''}" data-id="${aw.id}">
-      <svg viewBox="0 0 24 24"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
-    </button>
-    <div class="card-chevron"><svg viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg></div>
-  </div>`;
-}
+.card-body { flex: 1; min-width: 0; }
+.card-title-ko { font-size: 15px; font-weight: 600; color: var(--text-1); line-height: 1.35; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; text-overflow: ellipsis; white-space: normal; }
+.card-title-orig { font-size: 11.5px; color: var(--text-3); margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-style: italic; }
+.card-artist-ko { font-size: 12.5px; color: var(--text-2); margin-top: 6px; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.card-artist-orig { font-size: 11px; color: var(--text-3); font-style: italic; margin-top: 1px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.card-meta { display: flex; align-items: center; gap: 6px; margin-top: 8px; flex-wrap: wrap; }
+.card-room { font-size: 13px; color: var(--navy); font-weight: 600; background: var(--navy-light); padding: 2px 7px; border-radius: 5px; }
+.card-stars { display: flex; gap: 1px; margin-left: 2px;}
+.card-stars svg { width: 10px; height: 10px; }
 
-function updateSectionHeader() {
-  const titles = { home: '작품 목록', favorites: '즐겨찾기', done: '감상 완료' };
-  document.getElementById('sectionTitle').textContent = searchQuery ? '검색 결과' : titles[currentTab];
-  document.getElementById('sectionCount').textContent = `${filtered.length}점`;
-}
+.card-fav-btn { position: absolute; top: 12px; right: 12px; width: 28px; height: 28px; border-radius: 50%; background: none; border: none; cursor: pointer; display: flex; align-items: center; justify-content: center; padding: 0; }
+.card-fav-btn svg { width: 16px; height: 16px; stroke: #C7C7CC; fill: none; stroke-width: 1.8; transition: all 0.15s; }
+.card-fav-btn.active svg { stroke: #FF3B30; fill: #FF3B30; }
+.card-chevron { flex-shrink: 0; margin-right: 2px; }
+.card-chevron svg { width: 13px; height: 13px; stroke: #C7C7CC; fill: none; stroke-width: 2.5; stroke-linecap: round; }
 
-function updateProgress() {
-  document.getElementById('progressDone').textContent = LS.getDone().length;
-  document.getElementById('progressTotal').textContent = allArtworks.length;
-}
+/* ── State ── */
+.state-box { text-align: center; padding: 60px 20px; color: var(--text-3); font-size: 14px; background: var(--bg-card); border-radius: 14px; box-shadow: var(--shadow); line-height: 1.6; }
+.state-box .emoji { font-size: 36px; margin-bottom: 10px; }
 
-// ══════════════════════════════════════════
-//  오디오 엔진 & 미니 플레이어
-// ══════════════════════════════════════════
-const audioEl = document.getElementById('audioEl');
-let audioId = null;
-let isSeeking = false;
-let seekTime = 0;
+/* ── Mini Player ── */
+.mini-player { position: fixed; bottom: calc(env(safe-area-inset-bottom) + 56px); left: 50%; transform: translateX(-50%); width: calc(100% - 32px); max-width: 398px; background: var(--bg-card); border: 0.5px solid var(--border); border-radius: 14px; padding: 10px 14px; display: none; align-items: center; gap: 10px; z-index: 99; box-shadow: 0 4px 20px rgba(0,0,0,0.12); }
+.mini-player.visible { display: flex; }
+.mini-thumb { width: 40px; height: 40px; border-radius: 8px; overflow: hidden; flex-shrink: 0; background: #F2F2F7; }
+.mini-thumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.mini-info { flex: 1; min-width: 0; }
+.mini-title { font-size: 13px; font-weight: 600; color: var(--text-1); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.mini-artist { font-size: 11px; color: var(--text-3); margin-top: 1px; }
+.mini-progress-wrap { height: 2px; background: var(--border); border-radius: 1px; margin-top: 5px; }
+.mini-progress-bar { height: 100%; width: 0%; background: var(--navy); border-radius: 1px; }
+.mini-controls { display: flex; align-items: center; gap: 6px; flex-shrink: 0; }
+.mini-btn { width: 32px; height: 32px; border-radius: 50%; border: none; background: none; cursor: pointer; display: flex; align-items: center; justify-content: center; }
+.mini-btn.play-btn { background: var(--navy); }
+.mini-btn svg { width: 14px; height: 14px; fill: var(--text-3); }
+.mini-btn.play-btn svg { fill: #fff; margin-left: 2px; }
+.mini-btn.play-btn.playing svg { margin-left: 0; }
 
-function loadAudio(aw) {
-  currentSpeedIndex = 0;
-  audioEl.playbackRate = playbackSpeeds[0];
-  document.getElementById('speedControlBtn').textContent = `${playbackSpeeds[0].toFixed(1)}x`;
+/* ── Tab Bar ── */
+.tab-bar { position: fixed; bottom: 0; left: 0; right: 0; max-width: 430px; margin: 0 auto; background: rgba(250,250,248,0.94); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); border-top: 0.5px solid var(--border); padding: 8px 0 env(safe-area-inset-bottom); display: flex; z-index: 100; }
+.tab-item { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 3px; cursor: pointer; padding: 2px 0; }
+.tab-item svg { width: 24px; height: 24px; stroke: var(--text-3); fill: none; stroke-width: 1.8; transition: stroke 0.15s; }
+.tab-item span { font-size: 10px; color: var(--text-3); font-weight: 500; transition: color 0.15s; }
+.tab-item.active svg { stroke: var(--navy); }
+.tab-item.active span { color: var(--navy); }
 
-  if (audioId === aw.id) return; 
-  
-  audioId = aw.id;
-  const wasPlaying = !audioEl.paused;
-  audioEl.src = `./audio/${aw.id}.mp3`;
-  audioEl.load();
-  if (wasPlaying) audioEl.play().catch(()=>{});
-  
-  updateMiniPlayer(aw);
-  setMediaSession(aw);
-}
+/* ── Detail Page ── */
+.detail-page { position: fixed; inset: 0; width: 100%; max-width: 430px; margin: 0 auto; z-index: 200; background: var(--bg); display: none; flex-direction: column; overflow: hidden; }
+.detail-page.open { display: flex; }
+.detail-header { display: flex; align-items: center; justify-content: space-between; padding: env(safe-area-inset-top) 14px 10px; padding-top: calc(env(safe-area-inset-top) + 10px); flex-shrink: 0; background: rgba(250,250,248,0.94); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); border-bottom: 0.5px solid var(--border); }
+.detail-back { display: flex; align-items: center; gap: 2px; background: none; border: none; cursor: pointer; font-size: 16px; color: var(--navy); font-family: inherit; font-weight: 500; padding: 4px 6px; }
+.detail-back svg { width: 20px; height: 20px; stroke: var(--navy); fill: none; stroke-width: 2.5; stroke-linecap: round; }
+.detail-header-actions { display: flex; gap: 6px; }
+.detail-action-btn { width: 34px; height: 34px; border-radius: 50%; border: none; background: #F2F2F7; display: flex; align-items: center; justify-content: center; cursor: pointer; transition: background 0.1s; }
+.detail-action-btn:active { background: var(--border); }
+.detail-action-btn svg { width: 16px; height: 16px; stroke: var(--text-2); fill: none; stroke-width: 1.8; }
+.detail-action-btn.fav-active svg { stroke: #FF3B30; fill: #FF3B30; }
+.detail-action-btn.done-active { background: #E3F9E5; }
+.detail-action-btn.done-active svg { stroke: #34C759; }
 
-function togglePlay() { audioEl.paused ? audioEl.play().catch(()=>{}) : audioEl.pause(); }
+.detail-scroll { flex: 1; overflow-y: auto; scrollbar-width: none; padding-bottom: calc(env(safe-area-inset-bottom) + 20px); }
+.detail-scroll::-webkit-scrollbar { display: none; }
+.detail-image-wrap { background: #F2F2F7; }
+.detail-image-wrap img { width: 100%; object-fit: cover; max-height: 340px; display: block; }
+.detail-info { padding: 18px 20px 24px; }
+.detail-badges { display: flex; gap: 8px; align-items: center; margin-bottom: 10px; flex-wrap: wrap; }
+.detail-room-badge { font-size: 13px; font-weight: 600; color: var(--navy); background: var(--navy-light); padding: 3px 9px; border-radius: 6px; }
+.detail-done-badge { font-size: 12px; font-weight: 500; color: #34C759; background: #E3F9E5; padding: 3px 9px; border-radius: 6px; display: none; }
+.detail-done-badge.visible { display: inline-block; }
+.detail-title-ko { font-size: 20px; font-weight: 700; color: var(--text-1); line-height: 1.25; }
+.detail-title-orig { font-size: 13px; color: var(--text-3); font-style: italic; margin-top: 4px; }
+.detail-artist-ko { font-size: 15px; font-weight: 600; color: var(--navy); margin-top: 10px; }
+.detail-artist-orig { font-size: 12px; color: var(--text-3); font-style: italic; margin-top: 2px; }
+.detail-stars { display: flex; gap: 2px; align-items: center; margin-top: 10px; }
+.detail-stars svg { width: 14px; height: 14px; }
 
-function syncAudioUI() {
-  const playing = !audioEl.paused;
-  document.getElementById('audioPlayBtn').classList.toggle('playing', playing);
-  const miniBtn = document.getElementById('miniPlayBtn');
-  miniBtn.classList.toggle('playing', playing);
-  miniBtn.querySelector('.icon-play').style.display  = playing ? 'none' : 'block';
-  miniBtn.querySelector('.icon-pause').style.display = playing ? 'block' : 'none';
-  document.getElementById('miniPlayer').classList.toggle('visible', audioId !== null && (playing || audioEl.currentTime > 0));
-}
+/* Audio Player */
+.audio-player { margin: 16px 0; background: var(--bg-card); border-radius: 14px; border: 0.5px solid var(--border); padding: 14px 16px; box-shadow: var(--shadow); }
+.audio-top { display: flex; align-items: center; gap: 12px; margin-bottom: 12px; }
+.audio-play-btn { width: 44px; height: 44px; border-radius: 50%; background: var(--navy); border: none; cursor: pointer; display: flex; align-items: center; justify-content: center; flex-shrink: 0; transition: transform 0.1s; }
+.audio-play-btn:active { transform: scale(0.93); }
+.audio-play-btn .icon-play { display: block; }
+.audio-play-btn .icon-pause { display: none; }
+.audio-play-btn.playing .icon-play { display: none; }
+.audio-play-btn.playing .icon-pause { display: block; }
+.audio-play-btn svg { width: 16px; height: 16px; fill: #fff; }
+.audio-play-btn .icon-play svg { margin-left: 3px; }
+.audio-info-wrap { flex: 1; }
+.audio-label { font-size: 14px; font-weight: 600; color: var(--text-1); }
+.audio-times { display: flex; justify-content: space-between; margin-top: 2px; }
+.audio-times span { font-size: 12px; color: var(--text-3); font-variant-numeric: tabular-nums; }
+.audio-progress-wrap { height: 4px; background: var(--border); border-radius: 2px; cursor: pointer; padding: 10px 0; margin: -10px 0; background-clip: content-box; }
+.audio-progress-bar { height: 100%; width: 0%; background: var(--navy); border-radius: 2px; pointer-events: none; }
+audio { display: none; }
 
-function updateMiniPlayer(aw) {
-  document.getElementById('miniTitle').textContent = aw.title_ko;
-  document.getElementById('miniArtist').textContent = aw.artist_ko;
-  document.getElementById('miniThumb').src = `./images/${aw.id}.jpg`;
-}
+.speed-btn { flex-shrink: 0; width: 50px; padding: 5px 0; border-radius: 8px; border: 1px solid var(--border); background: #F2F2F7; color: var(--navy); font-size: 12px; font-weight: 600; font-family: inherit; cursor: pointer; transition: background 0.1s; }
+.speed-btn:active { background: #E5E5EA; }
 
-function setMediaSession(aw) {
-  if (!('mediaSession' in navigator)) return;
-  navigator.mediaSession.metadata = new MediaMetadata({ title: aw.title_ko, artist: aw.artist_ko, album: "Musée d'Orsay 오디오 가이드" });
-  ['play', 'pause'].forEach(action => {
-      try { navigator.mediaSession.setActionHandler(action, () => { togglePlay(); }); }
-      catch (e) {}
-  });
-}
+.detail-desc-label { font-size: 12px; font-weight: 600; color: var(--text-3); text-transform: uppercase; letter-spacing: 0.07em; margin: 24px 0 8px; }
+.detail-desc { font-size: 15px; color: var(--text-2); line-height: 1.75; }
 
-audioEl.addEventListener('timeupdate', () => {
-  if (isSeeking) return;
-  const cur = audioEl.currentTime, dur = audioEl.duration || 0;
-  const pct = dur ? (cur/dur*100) : 0;
-  document.getElementById('audioCurrent').textContent = fmtTime(cur);
-  document.getElementById('audioProgressBar').style.width = `${pct}%`;
-  document.getElementById('miniProgressBar').style.width = `${pct}%`;
-});
+/* Related Works */
+#relatedWorks { margin-top: 32px; }
+.related-title { font-size: 13px; font-weight: 600; color: var(--text-3); text-transform: uppercase; letter-spacing: 0.07em; margin-bottom: 8px; padding-top: 16px; border-top: 0.5px solid var(--border); }
+.related-card { display: flex; align-items: center; gap: 12px; padding: 10px; border-radius: 12px; cursor: pointer; transition: background-color 0.1s; }
+.related-card:active { background-color: var(--border); }
+.related-thumb { width: 50px; height: 50px; border-radius: 8px; overflow: hidden; flex-shrink: 0; background-color: #F2F2F7; }
+.related-thumb img { width: 100%; height: 100%; object-fit: cover; }
+.related-info .title { font-size: 14px; font-weight: 500; color: var(--text-1); }
+.related-info .artist { font-size: 12px; color: var(--text-3); margin-top: 2px; }
 
-audioEl.addEventListener('loadedmetadata', () => { document.getElementById('audioTotal').textContent = fmtTime(audioEl.duration); });
-audioEl.addEventListener('play', syncAudioUI);
-audioEl.addEventListener('pause', syncAudioUI);
-audioEl.addEventListener('ended', () => {
-  if (audioId && !LS.isDone(audioId)) { LS.toggleDone(audioId); updateProgress(); refreshDetailState(audioId); renderList(); }
-  syncAudioUI();
-});
-
-// ══════════════════════════════════════════
-//  상세 페이지 열기 / 닫기
-// ══════════════════════════════════════════
-function openDetail(idx) {
-  detailIndex = idx;
-  const aw = filtered[idx];
-  if (!aw) return;
-  document.getElementById('detailPage').classList.add('open');
-  document.body.style.overflow = 'hidden';
-
-  document.getElementById('detailImage').src = `./images/${aw.id}.jpg`;
-  document.getElementById('detailRoom').textContent = `${aw.floor}층 · ${aw.room}실`;
-  document.getElementById('detailTitleKo').textContent = aw.title_ko;
-  document.getElementById('detailTitleOrig').textContent = aw.title_original;
-  document.getElementById('detailArtistKo').textContent = aw.artist_ko;
-  document.getElementById('detailArtistOrig').textContent = aw.artist_original;
-  document.getElementById('detailStars').innerHTML = starsSVG(aw.rating, 14);
-  document.getElementById('detailDesc').textContent = aw.description;
-
-  refreshDetailState(aw.id);
-  loadAudio(aw);
-  renderRelatedWorks(aw);
-}
-
-function closeDetail() {
-  document.getElementById('detailPage').classList.remove('open');
-  document.body.style.overflow = '';
-}
-
-function refreshDetailState(id) {
-  document.getElementById('detailFavBtn').classList.toggle('fav-active', LS.isFav(id));
-  document.getElementById('detailDoneBtn').classList.toggle('done-active', LS.isDone(id));
-  document.getElementById('detailDoneBadge').classList.toggle('visible', LS.isDone(id));
-}
-
-function renderRelatedWorks(currentAw) {
-  const container = document.getElementById('relatedWorks');
-  const related = allArtworks.filter(a => a.room === currentAw.room && a.id !== currentAw.id && !LS.isDone(a.id));
-  if (related.length === 0) {
-    container.innerHTML = ''; return;
-  }
-  container.innerHTML = `
-    <div class="related-title">이 방의 다른 작품</div>
-    ${related.map(a => `
-      <div class="related-card" data-id="${a.id}">
-        <div class="related-thumb"><img src="./images/${a.id}.jpg" loading="lazy"></div>
-        <div class="related-info">
-          <div class="title">${a.title_ko}</div>
-          <div class="artist">${a.artist_ko}</div>
-        </div>
-      </div>
-    `).join('')}`;
-}
-
-// ★★★ 추가: 오프라인 전체 다운로드 로직 ★★★
-async function downloadAllForOffline() {
-  const btn = document.getElementById('downloadAllBtn');
-  if (btn.classList.contains('downloading') || btn.classList.contains('completed')) return;
-  
-  if (!('caches' in window)) {
-    alert("이 브라우저에서는 오프라인 저장을 지원하지 않습니다.");
-    return;
-  }
-
-  btn.classList.add('downloading');
-  const totalFiles = allArtworks.length * 2; // 이미지 + 오디오
-  let downloaded = 0;
-  
-  btn.innerHTML = `다운로드 중... (0 / ${totalFiles})`;
-  
-  try {
-    const cache = await caches.open('orsay-guide-v1');
-    
-    // 휴대폰 렉 방지를 위해 차례대로 하나씩 다운로드 (동기 처리)
-    for (const aw of allArtworks) {
-      const imgUrl = `./images/${aw.id}.jpg`;
-      const audioUrl = `./audio/${aw.id}.mp3`;
-      
-      try {
-        const imgRes = await fetch(imgUrl);
-        if(imgRes.ok) await cache.put(imgUrl, imgRes.clone());
-      } catch (e) {}
-      downloaded++;
-      btn.innerHTML = `다운로드 중... (${downloaded} / ${totalFiles})`;
-
-      try {
-        const audioRes = await fetch(audioUrl);
-        if(audioRes.ok) await cache.put(audioUrl, audioRes.clone());
-      } catch (e) {}
-      downloaded++;
-      btn.innerHTML = `다운로드 중... (${downloaded} / ${totalFiles})`;
-    }
-    
-    btn.classList.remove('downloading');
-    btn.classList.add('completed');
-    btn.innerHTML = `<svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg> 오프라인 저장 완료`;
-    
-  } catch (err) {
-    alert("다운로드 중 오류가 발생했습니다. 와이파이 연결을 확인해주세요.");
-    btn.classList.remove('downloading');
-    btn.innerHTML = `다시 시도하기`;
-  }
-}
-
-// ══════════════════════════════════════════
-//  이벤트 리스너 (사용자 입력)
-// ══════════════════════════════════════════
-function addEventListeners() {
-  // 다운로드 버튼
-  document.getElementById('downloadAllBtn').addEventListener('click', downloadAllForOffline);
-
-  const cardList = document.getElementById('cardList');
-  cardList.addEventListener('click', e => {
-    const card = e.target.closest('.artwork-card');
-    if (!card) return;
-    if (e.target.closest('.card-fav-btn')) {
-      const id = card.dataset.id;
-      LS.toggleFav(id);
-      card.querySelector('.card-fav-btn').classList.toggle('active', LS.isFav(id));
-      if (currentTab === 'favorites') applyFiltersAndRender();
-    } else {
-      openDetail(Number(card.dataset.idx));
-    }
-  });
-
-  document.getElementById('floorTabs').addEventListener('click', e => {
-    if (e.target.matches('.floor-tab')) {
-      currentFloor = e.target.dataset.floor;
-      currentRoom = 'all';
-      document.querySelector('.floor-tab.active').classList.remove('active');
-      e.target.classList.add('active');
-      buildRoomTabs();
-      applyFiltersAndRender();
-    }
-  });
-
-  document.getElementById('roomTabs').addEventListener('click', e => {
-    if (e.target.matches('.room-tab')) {
-      currentRoom = e.target.dataset.room;
-      document.querySelector('.room-tab.active').classList.remove('active');
-      e.target.classList.add('active');
-      applyFiltersAndRender();
-    }
-  });
-
-  document.querySelector('.tab-bar').addEventListener('click', e => {
-    const tab = e.target.closest('.tab-item');
-    if (tab) {
-      currentTab = tab.dataset.tab;
-      document.querySelector('.tab-item.active').classList.remove('active');
-      tab.classList.add('active');
-      const isHome = currentTab === 'home';
-      document.getElementById('floorWrap').style.display = isHome ? '' : 'none';
-      document.getElementById('roomWrap').style.display = isHome ? '' : 'none';
-      applyFiltersAndRender();
-    }
-  });
-
-  const searchInput = document.getElementById('searchInput');
-  const searchClear = document.getElementById('searchClear');
-  searchInput.addEventListener('input', () => {
-    searchQuery = searchInput.value;
-    searchClear.classList.toggle('visible', searchQuery.length > 0);
-    applyFiltersAndRender();
-  });
-  searchClear.addEventListener('click', () => {
-    searchInput.value = '';
-    searchQuery = '';
-    searchClear.classList.remove('visible');
-    applyFiltersAndRender();
-  });
-  
-  document.getElementById('detailBack').addEventListener('click', closeDetail);
-  document.getElementById('detailFavBtn').addEventListener('click', () => {
-    const id = filtered[detailIndex].id; LS.toggleFav(id); refreshDetailState(id);
-    const card = cardList.querySelector(`.artwork-card[data-id='${id}']`);
-    if(card) card.querySelector('.card-fav-btn').classList.toggle('active', LS.isFav(id));
-  });
-  document.getElementById('detailDoneBtn').addEventListener('click', () => {
-    const id = filtered[detailIndex].id; LS.toggleDone(id); refreshDetailState(id); updateProgress();
-    const card = cardList.querySelector(`.artwork-card[data-id='${id}']`);
-    if(card) card.classList.toggle('is-done', LS.isDone(id));
-  });
-  document.getElementById('relatedWorks').addEventListener('click', (e) => {
-    const card = e.target.closest('.related-card');
-    if(card) {
-      const newIdx = filtered.findIndex(item => item.id === card.dataset.id);
-      if (newIdx > -1) openDetail(newIdx);
-    }
-  });
-
-  document.getElementById('miniPlayBtn').addEventListener('click', togglePlay);
-  document.getElementById('audioPlayBtn').addEventListener('click', togglePlay);
-  document.getElementById('miniPlayer').addEventListener('click', e => {
-    if (e.target.closest('.mini-controls')) return; 
-    const currentPlayingIndex = filtered.findIndex(aw => aw.id === audioId);
-    if (currentPlayingIndex > -1) openDetail(currentPlayingIndex);
-  });
-  document.getElementById('speedControlBtn').addEventListener('click', () => {
-    currentSpeedIndex = (currentSpeedIndex + 1) % playbackSpeeds.length;
-    const newSpeed = playbackSpeeds[currentSpeedIndex];
-    audioEl.playbackRate = newSpeed;
-    document.getElementById('speedControlBtn').textContent = `${newSpeed.toFixed(1)}x`;
-  });
-
-  const progressBar = document.getElementById('audioProgressWrap');
-  
-  const handleSeek = (e) => {
-    if (!audioEl.duration) return;
-    const rect = progressBar.getBoundingClientRect();
-    let clientX = e.type.includes('mouse') ? e.clientX : e.touches[0].clientX;
-    let p = (clientX - rect.left) / rect.width;
-    p = Math.max(0, Math.min(1, p)); 
-    seekTime = p * audioEl.duration;
-    document.getElementById('audioProgressBar').style.width = `${p * 100}%`;
-    document.getElementById('audioCurrent').textContent = fmtTime(seekTime);
-  };
-
-  progressBar.addEventListener('mousedown', (e) => { isSeeking = true; handleSeek(e); });
-  document.addEventListener('mousemove', (e) => { if (isSeeking) handleSeek(e); });
-  document.addEventListener('mouseup', () => {
-    if (isSeeking) { audioEl.currentTime = seekTime; isSeeking = false; }
-  });
-
-  progressBar.addEventListener('touchstart', (e) => { isSeeking = true; handleSeek(e); }, { passive: true });
-  progressBar.addEventListener('touchmove', (e) => {
-    if (isSeeking) { e.preventDefault(); handleSeek(e); }
-  }, { passive: false });
-  progressBar.addEventListener('touchend', () => {
-    if (isSeeking) { audioEl.currentTime = seekTime; isSeeking = false; }
-  });
-}
-
-// ══════════════════════════════════════════
-//  서비스 워커 등록 (오프라인)
-// ══════════════════════════════════════════
-if ('serviceWorker' in navigator) {
-  window.addEventListener('load', () => {
-    navigator.serviceWorker.register('./sw.js')
-      .then(reg => console.log('SW:', reg.scope))
-      .catch(err => console.log('SW Fail:', err));
-  });
-}
-
-// App Start
-loadData();
+@media (min-width: 431px) { .app { box-shadow: 0 0 0 0.5px rgba(0,0,0,0.08), 0 8px 40px rgba(0,0,0,0.08); } }
+::-webkit-scrollbar { display: none; }
