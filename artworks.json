@@ -8,7 +8,6 @@
     "artist_ko": "에두아르 마네",
     "artist_original": "Édouard Manet",
     "rating": 4.5,
-    "audio_duration": "4:32",
     "description": "1863년 낙선전에 출품된 이 작품은 야외에서 옷을 벗은 여성과 정장을 입은 두 남성이 함께 있는 장면으로 당시 파리 사회에 큰 충격을 주었습니다."
   },
   {
@@ -20,7 +19,6 @@
     "artist_ko": "에두아르 마네",
     "artist_original": "Édouard Manet",
     "rating": 4.0,
-    "audio_duration": "3:45",
     "description": "1865년 살롱에 출품된 이 작품은 누드화의 전통을 현대적으로 재해석하여 당시 엄청난 스캔들을 일으켰습니다."
   },
   {
@@ -32,7 +30,6 @@
     "artist_ko": "빈센트 반 고흐",
     "artist_original": "Vincent van Gogh",
     "rating": 5.0,
-    "audio_duration": "5:10",
     "description": "1888년 아를에서 그린 이 작품은 고흐가 처음으로 별이 가득한 밤하늘을 그린 작품입니다. 노란 빛으로 빛나는 카페 테라스와 파란 밤하늘의 대비가 인상적입니다."
   },
   {
@@ -44,7 +41,6 @@
     "artist_ko": "조르주 쇠라",
     "artist_original": "Georges Seurat",
     "rating": 4.5,
-    "audio_duration": "5:18",
     "description": "점묘법의 대표작으로, 수백만 개의 점으로 이루어진 이 대형 작품은 2년에 걸쳐 완성되었습니다."
   },
   {
@@ -55,8 +51,7 @@
     "title_original": "La Gare Saint-Lazare",
     "artist_ko": "클로드 모네",
     "artist_original": "Claude Monet",
-    "rating": 4.5,
-    "audio_duration": "3:12",
+    "rating": 4,
     "description": "기차의 증기와 연기, 철골 구조물 사이로 비치는 빛을 포착하여 현대 도시의 역동성을 인상주의 기법으로 그려냈습니다."
   },
   {
@@ -67,8 +62,7 @@
     "title_original": "Londres, le Parlement. Trouée de soleil dans le brouillard (1904)",
     "artist_ko": "클로드 모네",
     "artist_original": "Claude Monet",
-    "rating": 4.5,
-    "audio_duration": "2:10",
+    "rating": 5.0,
     "description": "안개 낀 런던의 템스강 위로 햇빛이 스며드는 순간을 포착한 모네의 대표적인 연작 중 하나입니다. 빛과 대기가 만들어내는 몽환적이고 신비로운 색채 변화가 돋보입니다."
   },
   {
@@ -80,7 +74,17 @@
     "artist_ko": "클로드 모네",
     "artist_original": "Claude Monet",
     "rating": 5.0,
-    "audio_duration": "2:01",
     "description": "동일한 루앙 대성당 정면을 시간대와 날씨에 따라 다르게 변하는 빛의 모습을 기록하듯 그려낸 연작입니다. 인상주의 빛의 탐구를 보여주는 절정의 작품입니다."
+  },
+    {
+    "id": "53603",
+    "floor": "5",
+    "room": "36",
+    "title_ko": "자화상",
+    "title_original": "Portrait de l'artiste (1887)",
+    "artist_ko": "빈센트 반 고흐",
+    "artist_original": "Vincent van Gogh",
+    "rating": 5.0,
+    "description": "파리에 머물던 시절, 반 고흐가 현대적인 파리 시민이자 화가로서의 자신을 그린 자화상입니다. 점묘법의 영향을 받은 짧은 붓 터치와 파란색 배경, 그리고 주황색 턱수염의 강렬한 색채 대비가 특징입니다."
   }
 ]
