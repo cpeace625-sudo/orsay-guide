@@ -48,9 +48,10 @@ let currentTab    = 'home';
 let detailIndex   = -1;
 const playbackSpeeds = [1.0, 1.25, 1.5, 2.0];
 let currentSpeedIndex = 0;
+let isSeeking = false; // 드래그 상태 확인 변수
 
 // ══════════════════════════════════════════
-//  데이터 로드 및 초기화
+//  데이터 로드
 // ══════════════════════════════════════════
 async function loadData() {
   try {
@@ -72,7 +73,7 @@ function init() {
 }
 
 // ══════════════════════════════════════════
-//  UI 빌드 및 렌더링
+//  탭 생성 및 렌더링
 // ══════════════════════════════════════════
 function buildFloorTabs() {
   const floors = [...new Set(allArtworks.map(a => a.floor))].sort((a,b) => Number(b) - Number(a));
@@ -162,7 +163,6 @@ function cardHTML(aw, idx) {
       <div class="card-artist-orig">${aw.artist_original}</div>
       <div class="card-meta">
         <span class="card-room">${aw.floor}F · ${aw.room}실</span>
-        <!-- <span class="card-duration"><svg viewBox="0 0 24 24" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>${aw.audio_duration}</span> -->
         <span class="card-stars">${starsSVG(aw.rating, 10)}</span>
       </div>
     </div>
@@ -195,7 +195,7 @@ function loadAudio(aw) {
   audioEl.playbackRate = playbackSpeeds[0];
   document.getElementById('speedControlBtn').textContent = `${playbackSpeeds[0].toFixed(1)}x`;
 
-  if (audioId === aw.id) return;
+  if (audioId === aw.id) return; 
   
   audioId = aw.id;
   const wasPlaying = !audioEl.paused;
@@ -234,6 +234,24 @@ function setMediaSession(aw) {
   });
 }
 
+// 타이머 업데이트 (드래그 중이 아닐 때만 작동)
+audioEl.addEventListener('timeupdate', () => {
+  if (isSeeking) return; // 드래그 중에는 시간 업데이트 방지
+  const cur = audioEl.currentTime, dur = audioEl.duration || 0;
+  const pct = dur ? (cur/dur*100) : 0;
+  document.getElementById('audioCurrent').textContent = fmtTime(cur);
+  document.getElementById('audioProgressBar').style.width = `${pct}%`;
+  document.getElementById('miniProgressBar').style.width = `${pct}%`;
+});
+
+audioEl.addEventListener('loadedmetadata', () => { document.getElementById('audioTotal').textContent = fmtTime(audioEl.duration); });
+audioEl.addEventListener('play', syncAudioUI);
+audioEl.addEventListener('pause', syncAudioUI);
+audioEl.addEventListener('ended', () => {
+  if (audioId && !LS.isDone(audioId)) { LS.toggleDone(audioId); updateProgress(); refreshDetailState(audioId); renderList(); }
+  syncAudioUI();
+});
+
 // ══════════════════════════════════════════
 //  상세 페이지
 // ══════════════════════════════════════════
@@ -243,6 +261,7 @@ function openDetail(idx) {
   if (!aw) return;
   document.getElementById('detailPage').classList.add('open');
   document.body.style.overflow = 'hidden';
+
   document.getElementById('detailImage').src = `./images/${aw.id}.jpg`;
   document.getElementById('detailRoom').textContent = `${aw.floor}층 · ${aw.room}실`;
   document.getElementById('detailTitleKo').textContent = aw.title_ko;
@@ -251,6 +270,7 @@ function openDetail(idx) {
   document.getElementById('detailArtistOrig').textContent = aw.artist_original;
   document.getElementById('detailStars').innerHTML = starsSVG(aw.rating, 14);
   document.getElementById('detailDesc').textContent = aw.description;
+
   refreshDetailState(aw.id);
   loadAudio(aw);
   renderRelatedWorks(aw);
@@ -287,11 +307,12 @@ function renderRelatedWorks(currentAw) {
 }
 
 // ══════════════════════════════════════════
-//  이벤트 리스너 (모든 사용자 입력 처리)
+//  이벤트 리스너 (사용자 입력)
 // ══════════════════════════════════════════
 function addEventListeners() {
-  // --- 메인 목록 ---
   const cardList = document.getElementById('cardList');
+  
+  // 메인 리스트 클릭
   cardList.addEventListener('click', e => {
     const card = e.target.closest('.artwork-card');
     if (!card) return;
@@ -305,6 +326,7 @@ function addEventListeners() {
     }
   });
 
+  // 탭 및 검색
   document.getElementById('floorTabs').addEventListener('click', e => {
     if (e.target.matches('.floor-tab')) {
       currentFloor = e.target.dataset.floor;
@@ -315,7 +337,6 @@ function addEventListeners() {
       applyFiltersAndRender();
     }
   });
-
   document.getElementById('roomTabs').addEventListener('click', e => {
     if (e.target.matches('.room-tab')) {
       currentRoom = e.target.dataset.room;
@@ -324,7 +345,6 @@ function addEventListeners() {
       applyFiltersAndRender();
     }
   });
-
   document.querySelector('.tab-bar').addEventListener('click', e => {
     const tab = e.target.closest('.tab-item');
     if (tab) {
@@ -337,8 +357,7 @@ function addEventListeners() {
       applyFiltersAndRender();
     }
   });
-
-  // --- 검색 ---
+  
   const searchInput = document.getElementById('searchInput');
   const searchClear = document.getElementById('searchClear');
   searchInput.addEventListener('input', () => {
@@ -353,7 +372,7 @@ function addEventListeners() {
     applyFiltersAndRender();
   });
   
-  // --- 상세 페이지 ---
+  // 상세 페이지 조작
   document.getElementById('detailBack').addEventListener('click', closeDetail);
   document.getElementById('detailFavBtn').addEventListener('click', () => {
     const id = filtered[detailIndex].id; LS.toggleFav(id); refreshDetailState(id);
@@ -373,7 +392,9 @@ function addEventListeners() {
     }
   });
 
-  // --- 오디오 플레이어 ---
+  // 오디오 플레이어 기본 버튼
+  document.getElementById('miniPlayBtn').addEventListener('click', togglePlay);
+  document.getElementById('audioPlayBtn').addEventListener('click', togglePlay);
   document.getElementById('miniPlayer').addEventListener('click', e => {
     if (e.target.closest('.mini-controls')) return; 
     const currentPlayingIndex = filtered.findIndex(aw => aw.id === audioId);
@@ -385,50 +406,59 @@ function addEventListeners() {
     audioEl.playbackRate = newSpeed;
     document.getElementById('speedControlBtn').textContent = `${newSpeed.toFixed(1)}x`;
   });
-  audioEl.addEventListener('timeupdate', () => {
-    if (isSeeking) return; // 드래그 중에는 시간 업데이트 방지
-    const cur = audioEl.currentTime, dur = audioEl.duration || 0;
-    const pct = dur ? (cur / dur * 100) : 0;
-    document.getElementById('audioCurrent').textContent = fmtTime(cur);
-    document.getElementById('audioProgressBar').style.width = `${pct}%`;
-    document.getElementById('miniProgressBar').style.width = `${pct}%`;
-  });
-  audioEl.addEventListener('loadedmetadata', () => { document.getElementById('audioTotal').textContent = fmtTime(audioEl.duration); });
-  audioEl.addEventListener('play', syncAudioUI);
-  audioEl.addEventListener('pause', syncAudioUI);
-  audioEl.addEventListener('ended', () => {
-    if (audioId && !LS.isDone(audioId)) { LS.toggleDone(audioId); updateProgress(); refreshDetailState(audioId); renderList(); }
-    syncAudioUI();
-  });
-  document.getElementById('miniPlayBtn').addEventListener('click', togglePlay);
-  document.getElementById('audioPlayBtn').addEventListener('click', togglePlay);
 
-  // --- 재생바 드래그 로직 ---
+  // ▼▼▼ 모바일 터치 호환 완벽 드래그 로직 ▼▼▼
   const progressBar = document.getElementById('audioProgressWrap');
-  let isSeeking = false;
-  const startSeeking = (e) => { if (!audioEl.duration) return; isSeeking = true; seek(e); };
-  const stopSeeking = () => { isSeeking = false; };
-  const seek = (e) => {
-    if (!isSeeking) return;
-    e.preventDefault();
-    const rect = progressBar.getBoundingClientRect();
-    const clientX = e.touches ? e.touches[0].clientX : e.clientX;
-    let newTime = ((clientX - rect.left) / rect.width) * audioEl.duration;
-    if (newTime < 0) newTime = 0;
-    if (newTime > audioEl.duration) newTime = audioEl.duration;
-    audioEl.currentTime = newTime;
-    
-    // 드래그 중에도 시간 표시 업데이트
-    document.getElementById('audioCurrent').textContent = fmtTime(newTime);
-    document.getElementById('audioProgressBar').style.width = `${(newTime / audioEl.duration * 100)}%`;
+  let seekTime = 0; // 계산된 임시 시간 저장소
+
+  // 1. 누를 때 (UI만 업데이트 시작)
+  const startSeeking = (e) => {
+    if (!audioEl.duration) return;
+    isSeeking = true;
+    updateSeekUI(e);
   };
+
+  // 2. 끌어당길 때 (화면 게이지만 업데이트)
+  const moveSeeking = (e) => {
+    if (!isSeeking) return;
+    if (e.cancelable) e.preventDefault(); // 중요: 모바일에서 화면이 스크롤되는 것을 막아줌
+    updateSeekUI(e);
+  };
+
+  // 3. 손을 뗄 때 (그때서야 오디오 위치 실제 이동)
+  const stopSeeking = () => {
+    if (isSeeking) {
+      audioEl.currentTime = seekTime; // 여기서 실제 이동
+      isSeeking = false;
+    }
+  };
+
+  // 실제 화면 갱신 함수
+  const updateSeekUI = (e) => {
+    const rect = progressBar.getBoundingClientRect();
+    let clientX = e.clientX;
+    if (e.touches && e.touches.length > 0) {
+      clientX = e.touches[0].clientX; // 터치 이벤트일 경우
+    } else if (e.changedTouches && e.changedTouches.length > 0) {
+      clientX = e.changedTouches[0].clientX;
+    }
+    
+    let p = (clientX - rect.left) / rect.width;
+    p = Math.max(0, Math.min(1, p)); // 0% ~ 100% 사이로 제한
+    seekTime = p * audioEl.duration;
+    
+    // 오디오는 건드리지 않고, 화면 UI만 즉시 업데이트
+    document.getElementById('audioProgressBar').style.width = `${p * 100}%`;
+    document.getElementById('audioCurrent').textContent = fmtTime(seekTime);
+  };
+
+  // 마우스 이벤트 (PC)
   progressBar.addEventListener('mousedown', startSeeking);
-  window.addEventListener('mousemove', seek);
+  window.addEventListener('mousemove', moveSeeking, { passive: false });
   window.addEventListener('mouseup', stopSeeking);
+
+  // 터치 이벤트 (모바일)
   progressBar.addEventListener('touchstart', startSeeking, { passive: true });
-  window.addEventListener('touchmove', seek, { passive: false });
+  window.addEventListener('touchmove', moveSeeking, { passive: false });
   window.addEventListener('touchend', stopSeeking);
 }
-
-// App Start
-loadData();
