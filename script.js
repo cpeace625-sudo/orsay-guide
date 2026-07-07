@@ -46,7 +46,7 @@ let currentRoom   = 'all';
 let searchQuery   = '';
 let currentTab    = 'home';
 let detailIndex   = -1;
-const playbackSpeeds = [1.0, 1.25, 1.5, 2.0]; // 원하는 배속 목록
+const playbackSpeeds = [1.0, 1.25, 1.5, 2.0]; // 배속 목록
 let currentSpeedIndex = 0; // 현재 배속 인덱스
 
 // ══════════════════════════════════════════
@@ -107,20 +107,18 @@ function applyFiltersAndRender() {
   let source;
 
   if (q) {
-    // 검색어가 있으면 전체 작품에서 검색
     source = allArtworks.filter(a =>
       a.title_ko.toLowerCase().includes(q) || a.title_original.toLowerCase().includes(q) ||
       a.artist_ko.toLowerCase().includes(q) || a.artist_original.toLowerCase().includes(q) ||
       String(a.room).toLowerCase().includes(q)
     );
   } else {
-    // 검색어가 없으면 탭과 필터에 따라
     source = allArtworks;
     if (currentTab === 'favorites') {
       source = allArtworks.filter(a => LS.isFav(a.id));
     } else if (currentTab === 'done') {
       source = allArtworks.filter(a => LS.isDone(a.id));
-    } else { // home tab
+    } else {
       if (currentFloor) source = source.filter(a => a.floor === currentFloor);
       if (currentRoom !== 'all') source = source.filter(a => a.room === currentRoom);
     }
@@ -172,7 +170,8 @@ function cardHTML(aw, idx) {
       <div class="card-artist-orig">${aw.artist_original}</div>
       <div class="card-meta">
         <span class="card-room">${aw.floor}F · ${aw.room}실</span>
-        <span class="card-duration"><svg viewBox="0 0 24 24" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>${aw.audio_duration}</span>
+        <!-- 목록에서 오디오 시간 숨김 처리 (주석 처리됨) -->
+        <!-- <span class="card-duration"><svg viewBox="0 0 24 24" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>${aw.audio_duration}</span> -->
         <span class="card-stars">${starsSVG(aw.rating, 10)}</span>
       </div>
     </div>
@@ -259,7 +258,7 @@ function addEventListeners() {
     applyFiltersAndRender();
   });
   
-  // 상세 페이지 이벤트
+  // 상세 페이지 상단 버튼 이벤트
   document.getElementById('detailBack').addEventListener('click', closeDetail);
   document.getElementById('detailFavBtn').addEventListener('click', () => {
     const id = filtered[detailIndex].id; LS.toggleFav(id); refreshDetailState(id);
@@ -272,36 +271,37 @@ function addEventListeners() {
     if(card) card.classList.toggle('is-done', LS.isDone(id));
   });
 
-  // ▼▼▼ 1. 미니플레이어 클릭 이벤트 ▼▼▼
+  // 미니플레이어 클릭 이벤트 (상세 페이지로 이동)
   document.getElementById('miniPlayer').addEventListener('click', e => {
-    if (e.target.closest('.mini-controls')) return; // 재생/정지 버튼은 제외
+    if (e.target.closest('.mini-controls')) return; 
     const currentPlayingIndex = filtered.findIndex(aw => aw.id === audioId);
     if (currentPlayingIndex > -1) {
       openDetail(currentPlayingIndex);
     }
   });
 
-  // ▼▼▼ 2. 상세 페이지 재생바 조절 이벤트 ▼▼▼
-  document.getElementById('audioProgressWrap').addEventListener('click', e => {
-    if (!audioEl.duration) return;
-    const rect = e.currentTarget.getBoundingClientRect();
-    const newTime = ((e.clientX - rect.left) / rect.width) * audioEl.duration;
-    audioEl.currentTime = newTime;
+  // 배속 버튼 클릭 이벤트
+  document.getElementById('speedControlBtn').addEventListener('click', () => {
+    currentSpeedIndex = (currentSpeedIndex + 1) % playbackSpeeds.length;
+    const newSpeed = playbackSpeeds[currentSpeedIndex];
+    audioEl.playbackRate = newSpeed;
+    document.getElementById('speedControlBtn').textContent = `${newSpeed.toFixed(1)}x`;
   });
 }
+
 // ══════════════════════════════════════════
-//  오디오 엔진 & 미니 플레이어
+//  오디오 엔진 & 미니 플레이어 (재생바 드래그 로직 포함)
 // ══════════════════════════════════════════
 const audioEl = document.getElementById('audioEl');
 let audioId = null;
 
 function loadAudio(aw) {
-  // 다른 트랙을 로드하면 배속을 1.0x로 리셋
+  // 배속 1.0x 초기화
   currentSpeedIndex = 0;
   audioEl.playbackRate = playbackSpeeds[0];
   document.getElementById('speedControlBtn').textContent = `${playbackSpeeds[0].toFixed(1)}x`;
 
-  if (audioId === aw.id) return; // 이미 같은 오디오가 로드되어 있으면 여기서 멈춤
+  if (audioId === aw.id) return;
   
   audioId = aw.id;
   const wasPlaying = !audioEl.paused;
@@ -312,7 +312,9 @@ function loadAudio(aw) {
   updateMiniPlayer(aw);
   setMediaSession(aw);
 }
+
 function togglePlay() { audioEl.paused ? audioEl.play().catch(()=>{}) : audioEl.pause(); }
+
 function syncAudioUI() {
   const playing = !audioEl.paused;
   document.getElementById('audioPlayBtn').classList.toggle('playing', playing);
@@ -322,11 +324,13 @@ function syncAudioUI() {
   miniBtn.querySelector('.icon-pause').style.display = playing ? 'block' : 'none';
   document.getElementById('miniPlayer').classList.toggle('visible', audioId !== null && (playing || audioEl.currentTime > 0));
 }
+
 function updateMiniPlayer(aw) {
   document.getElementById('miniTitle').textContent = aw.title_ko;
   document.getElementById('miniArtist').textContent = aw.artist_ko;
   document.getElementById('miniThumb').src = `./images/${aw.id}.jpg`;
 }
+
 function setMediaSession(aw) {
   if (!('mediaSession' in navigator)) return;
   navigator.mediaSession.metadata = new MediaMetadata({ title: aw.title_ko, artist: aw.artist_ko, album: "Musée d'Orsay 오디오 가이드" });
@@ -343,7 +347,10 @@ audioEl.addEventListener('timeupdate', () => {
   document.getElementById('audioProgressBar').style.width = `${pct}%`;
   document.getElementById('miniProgressBar').style.width = `${pct}%`;
 });
-audioEl.addEventListener('loadedmetadata', () => { document.getElementById('audioTotal').textContent = fmtTime(audioEl.duration); });
+
+audioEl.addEventListener('loadedmetadata', () => { 
+  document.getElementById('audioTotal').textContent = fmtTime(audioEl.duration); 
+});
 audioEl.addEventListener('play', syncAudioUI);
 audioEl.addEventListener('pause', syncAudioUI);
 audioEl.addEventListener('ended', () => {
@@ -351,13 +358,44 @@ audioEl.addEventListener('ended', () => {
   syncAudioUI();
 });
 
-document.getElementById('audioProgressWrap').addEventListener('click', e => {
-  if (!audioEl.duration) return;
-  const rect = e.currentTarget.getBoundingClientRect();
-  audioEl.currentTime = ((e.clientX - rect.left) / rect.width) * audioEl.duration;
-});
 document.getElementById('miniPlayBtn').addEventListener('click', togglePlay);
 document.getElementById('audioPlayBtn').addEventListener('click', togglePlay);
+
+// --- 재생바 클릭 및 드래그(끌기) 로직 ---
+const progressBar = document.getElementById('audioProgressWrap');
+let isSeeking = false;
+
+const startSeeking = (e) => {
+  if (!audioEl.duration) return;
+  isSeeking = true;
+  seek(e);
+};
+
+const stopSeeking = () => {
+  isSeeking = false;
+};
+
+const seek = (e) => {
+  if (!isSeeking || !audioEl.duration) return;
+  const rect = progressBar.getBoundingClientRect();
+  const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+  let newTime = ((clientX - rect.left) / rect.width) * audioEl.duration;
+  
+  if (newTime < 0) newTime = 0;
+  if (newTime > audioEl.duration) newTime = audioEl.duration;
+  
+  audioEl.currentTime = newTime;
+};
+
+// PC 마우스 이벤트
+progressBar.addEventListener('mousedown', startSeeking);
+window.addEventListener('mousemove', seek);
+window.addEventListener('mouseup', stopSeeking);
+
+// 모바일 터치 이벤트
+progressBar.addEventListener('touchstart', startSeeking, {passive: true});
+window.addEventListener('touchmove', seek, {passive: false});
+window.addEventListener('touchend', stopSeeking);
 
 // ══════════════════════════════════════════
 //  상세 페이지
@@ -417,17 +455,9 @@ function renderRelatedWorks(currentAw) {
     
   container.querySelectorAll('.related-card').forEach(card => {
       card.addEventListener('click', () => {
-          // 'filtered'는 현재 메인 화면의 목록이므로, 여기서 찾아서 인덱스를 넘겨야 함.
           const newIdx = filtered.findIndex(item => item.id === card.dataset.id);
           if (newIdx > -1) {
               openDetail(newIdx);
-          } else {
-              // 만약 현재 필터링된 목록에 없다면, 전체 목록에서 찾아서 임시로 인덱스를 부여
-              const allIdx = allArtworks.findIndex(item => item.id === card.dataset.id);
-              // 이 경우 'filtered'를 잠시 교체하고 열 수도 있으나, 사용성을 해칠 수 있어
-              // 현재는 메인 목록에 보이는 작품 내에서만 이동하도록 처리함.
-              // 만약 관련 작품이 현재 필터에 없다면, openDetail을 호출하지 않음.
-              console.log("관련 작품이 현재 목록에 없습니다.");
           }
       });
   });
