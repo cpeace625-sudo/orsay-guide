@@ -57,8 +57,8 @@ async function loadData() {
     const res = await fetch('./artworks.json');
     if (!res.ok) throw new Error('fetch fail');
     allArtworks = await res.json();
-  } catch (err) {
-    console.error('artworks.json 불러오기 실패:', err);
+  } catch {
+    console.error('artworks.json 불러오기 실패');
     document.getElementById('cardList').innerHTML = `<div class="state-box"><div class="emoji">😥</div>데이터를 불러오지 못했습니다.</div>`;
   }
   init();
@@ -72,7 +72,7 @@ function init() {
 }
 
 // ══════════════════════════════════════════
-//  탭 생성 및 렌더링
+//  UI 빌드 및 렌더링
 // ══════════════════════════════════════════
 function buildFloorTabs() {
   const floors = [...new Set(allArtworks.map(a => a.floor))].sort((a,b) => Number(b) - Number(a));
@@ -235,9 +235,8 @@ function setMediaSession(aw) {
   });
 }
 
-// 시간에 따라 게이지 바 자동으로 움직임
 audioEl.addEventListener('timeupdate', () => {
-  if (isSeeking) return; // 드래그 중에는 자동 움직임 멈춤
+  if (isSeeking) return;
   const cur = audioEl.currentTime, dur = audioEl.duration || 0;
   const pct = dur ? (cur/dur*100) : 0;
   document.getElementById('audioCurrent').textContent = fmtTime(cur);
@@ -307,12 +306,65 @@ function renderRelatedWorks(currentAw) {
     `).join('')}`;
 }
 
+// ★★★ 수정: 오프라인 전체 다운로드 로직 ★★★
+async function downloadAllForOffline() {
+  const btn = document.getElementById('downloadAllBtn');
+  
+  if (btn.classList.contains('downloading') || btn.classList.contains('completed')) return;
+  
+  if (!('caches' in window)) {
+    alert("이 브라우저에서는 오프라인 저장을 지원하지 않습니다.");
+    return;
+  }
+
+  btn.classList.add('downloading');
+  const totalFiles = allArtworks.length * 2; // 이미지 + 오디오
+  let downloaded = 0;
+  
+  btn.innerHTML = `다운로드 준비 중...`;
+  
+  try {
+    // 🚨 여기서 v2 창고를 열도록 수정했습니다 🚨
+    const cache = await caches.open('orsay-guide-v2');
+    
+    for (const aw of allArtworks) {
+      const imgUrl = `./images/${aw.id}.jpg`;
+      const audioUrl = `./audio/${aw.id}.mp3`;
+      
+      try {
+        const imgRes = await fetch(imgUrl);
+        if(imgRes.ok) await cache.put(imgUrl, imgRes.clone());
+      } catch (e) { console.log(e); }
+      downloaded++;
+      btn.innerHTML = `다운로드 중... (${downloaded} / ${totalFiles})`;
+
+      try {
+        const audioRes = await fetch(audioUrl);
+        if(audioRes.ok) await cache.put(audioUrl, audioRes.clone());
+      } catch (e) { console.log(e); }
+      downloaded++;
+      btn.innerHTML = `다운로드 중... (${downloaded} / ${totalFiles})`;
+    }
+    
+    btn.classList.remove('downloading');
+    btn.classList.add('completed');
+    btn.innerHTML = `<svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg> 오프라인 저장 완료`;
+    
+  } catch (err) {
+    alert("다운로드 중 오류가 발생했습니다. 와이파이 상태를 확인해주세요.");
+    btn.classList.remove('downloading');
+    btn.innerHTML = `다시 시도하기`;
+  }
+}
+
 // ══════════════════════════════════════════
-//  이벤트 리스너 (모든 버튼 클릭 및 터치 처리)
+//  이벤트 리스너 (사용자 입력)
 // ══════════════════════════════════════════
 function addEventListeners() {
+  // 다운로드 버튼
+  document.getElementById('downloadAllBtn').addEventListener('click', downloadAllForOffline);
+
   const cardList = document.getElementById('cardList');
-  
   cardList.addEventListener('click', e => {
     const card = e.target.closest('.artwork-card');
     if (!card) return;
@@ -406,56 +458,42 @@ function addEventListeners() {
     document.getElementById('speedControlBtn').textContent = `${newSpeed.toFixed(1)}x`;
   });
 
-  // ▼▼▼ 완전히 안전하게 수정된 오디오 드래그(끌기) 로직 ▼▼▼
   const progressBar = document.getElementById('audioProgressWrap');
   
   const handleSeek = (e) => {
     if (!audioEl.duration) return;
     const rect = progressBar.getBoundingClientRect();
     let clientX = e.type.includes('mouse') ? e.clientX : e.touches[0].clientX;
-    
-    // 재생바 범위를 벗어나지 않도록 제한
     let p = (clientX - rect.left) / rect.width;
     p = Math.max(0, Math.min(1, p)); 
     seekTime = p * audioEl.duration;
-    
     document.getElementById('audioProgressBar').style.width = `${p * 100}%`;
     document.getElementById('audioCurrent').textContent = fmtTime(seekTime);
   };
 
-  // 마우스 (PC)
-  progressBar.addEventListener('mousedown', (e) => {
-    isSeeking = true;
-    handleSeek(e);
-  });
-  document.addEventListener('mousemove', (e) => {
-    if (isSeeking) handleSeek(e);
-  });
+  progressBar.addEventListener('mousedown', (e) => { isSeeking = true; handleSeek(e); });
+  document.addEventListener('mousemove', (e) => { if (isSeeking) handleSeek(e); });
   document.addEventListener('mouseup', () => {
-    if (isSeeking) {
-      audioEl.currentTime = seekTime;
-      isSeeking = false;
-    }
+    if (isSeeking) { audioEl.currentTime = seekTime; isSeeking = false; }
   });
 
-  // 터치 (모바일) - 스크롤 마비를 막기 위해 progressBar 위에서만 작동하도록 안전하게 변경
-  progressBar.addEventListener('touchstart', (e) => {
-    isSeeking = true;
-    handleSeek(e);
-  }, { passive: true });
-  
+  progressBar.addEventListener('touchstart', (e) => { isSeeking = true; handleSeek(e); }, { passive: true });
   progressBar.addEventListener('touchmove', (e) => {
-    if (isSeeking) {
-      e.preventDefault(); // 재생바 안에서 움직일 때만 화면 스크롤 방지 (먹통 방지 핵심)
-      handleSeek(e);
-    }
+    if (isSeeking) { e.preventDefault(); handleSeek(e); }
   }, { passive: false });
-  
   progressBar.addEventListener('touchend', () => {
-    if (isSeeking) {
-      audioEl.currentTime = seekTime;
-      isSeeking = false;
-    }
+    if (isSeeking) { audioEl.currentTime = seekTime; isSeeking = false; }
+  });
+}
+
+// ══════════════════════════════════════════
+//  서비스 워커 등록 (오프라인)
+// ══════════════════════════════════════════
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('./sw.js')
+      .then(reg => console.log('SW:', reg.scope))
+      .catch(err => console.log('SW Fail:', err));
   });
 }
 
