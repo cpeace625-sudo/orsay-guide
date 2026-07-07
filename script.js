@@ -487,8 +487,9 @@ function addEventListeners() {
 }
 
 // ══════════════════════════════════════════
-//  서비스 워커 등록 (오프라인)
+//  서비스 워커 등록 (오프라인 기능)
 // ══════════════════════════════════════════
+/*
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
     navigator.serviceWorker.register('./sw.js')
@@ -496,6 +497,7 @@ if ('serviceWorker' in navigator) {
       .catch(err => console.log('SW Fail:', err));
   });
 }
+*/  //
 
 // App Start
 loadData();
