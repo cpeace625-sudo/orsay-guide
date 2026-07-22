@@ -1,5 +1,5 @@
 // ★맨 위 버전 숫자를 바꾸면 앱이 새로고침 됩니다★
-const CACHE_NAME = 'orsay-guide-v2'; 
+const CACHE_NAME = 'orsay-guide-final'; 
 
 const urlsToCache = [
   './',
